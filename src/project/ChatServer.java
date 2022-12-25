@@ -69,45 +69,56 @@ public class ChatServer implements Runnable { // runnable interface has the run 
                         String clientPhoneNumber = inputFromSocket.nextLine();
                         String contactChoice = inputFromSocket.nextLine();
                         String receiverNumber = "";
+                        boolean hasError=false;
                         switch (contactChoice) {
                             case "newContact": {
                                 receiverNumber = inputFromSocket.nextLine();
                                 String successOrErrorMessage = DBConnector.addingContact(clientPhoneNumber, receiverNumber);
+                                if(successOrErrorMessage.contains("error")){
+                                    hasError=true;
+                                }
                                 //output response to client
                                 outputToSocket.println(successOrErrorMessage);
                                 break;
                             }
                             case "oldContact": {
                                 ArrayList<String> contacts = DBConnector.getContacts(clientPhoneNumber);
+                                if(contacts.get(0).contains("error")){
+                                    hasError=true;
+                                }
                                 for (String s : contacts) {
                                     System.out.println(s);
                                 }
                                 outputToSocket.println(contacts.size()); // send the size so the client can iterate over it
                                 for (String contact : contacts)
                                     outputToSocket.println(contact);
-                                receiverNumber = inputFromSocket.nextLine();
+                                if(!hasError)
+                                    receiverNumber = inputFromSocket.nextLine();
                                 break;
                             }
                             default:
                                 break;
                         }
                         if (!(contactChoice.equals("newContact") || contactChoice.equals("oldContact"))) break;
-                        StringBuilder message = new StringBuilder();
-                        String str = "";
-                        while (!(str = inputFromSocket.nextLine()).isBlank()) {
-                            System.out.println(str);
-                            message.append(str);
-                        }
-                        System.out.println("contactChoice " + contactChoice);
-                        System.out.println("clientPhoneNumber : " + clientPhoneNumber);
-                        System.out.println("receiverNumber : " + receiverNumber);
-                        System.out.println("message : " + message);
-                        // save the message into db
-                        String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber,
-                                message.toString());
-                        //output response to client
-                        outputToSocket.println(successOrErrorMessage);
-                        // send the message for the other client
+                        if(!hasError)//if no error was received by db send the message
+                        {
+                            System.out.println("stooopid");
+                            StringBuilder message = new StringBuilder();
+                            String str = "";
+                            while (!(str = inputFromSocket.nextLine()).equals("#send")) {
+                                System.out.println(str);
+                                message.append(str);
+                            }
+                            System.out.println("contactChoice " + contactChoice);
+                            System.out.println("clientPhoneNumber : " + clientPhoneNumber);
+                            System.out.println("receiverNumber : " + receiverNumber);
+                            System.out.println("message : " + message);
+                            // save the message into db
+                            String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber,
+                                    message.toString());
+                            //output response to client
+                            outputToSocket.println(successOrErrorMessage);
+                            // send the message for the other client
                         /*int otherSocketPort = PortIdCollection.getSocketPort(receiverNumber);
                         String host = PortIdCollection.getHost(receiverNumber);
                         Socket otherSocket = new Socket(host, otherSocketPort);
@@ -117,6 +128,7 @@ public class ChatServer implements Runnable { // runnable interface has the run 
                         outputToOtherSocket.print(true);
                         outputToOtherSocket.println(clientPhoneNumber);
                         outputToOtherSocket.println("content: " + message);*/
+                        }
                         break;
                     }
                     case "showMessages": {
@@ -124,6 +136,7 @@ public class ChatServer implements Runnable { // runnable interface has the run 
                         System.out.println("showing messages to " + clientPhoneNumber);
                         // get the messages of the client
                         ArrayList<HashMap> result = DBConnector.getMessages(clientPhoneNumber);
+                        System.out.println("messages result = "+result);
                         outputToSocket.println(result.size());
                         for (HashMap hashMap : result) {
                             String message = "";
@@ -133,7 +146,10 @@ public class ChatServer implements Runnable { // runnable interface has the run 
                             } else if (clientPhoneNumber.equals(hashMap.get("receiver_phone_number"))) {
                                 message = "From: " + hashMap.get("sender_phone_number") + ", To: ME" +
                                         ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
-                            } else {
+                            }else if(hashMap.containsKey("error")){
+                                message=hashMap.get("error").toString();
+                            }
+                            else {
                                 message = "Saved Message:" +
                                         ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
                             }

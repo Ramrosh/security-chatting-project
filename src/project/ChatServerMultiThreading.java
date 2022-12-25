@@ -2,12 +2,10 @@ package project;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-// nc localhost 11111
 public class ChatServerMultiThreading {
     public static void main(String[] args) throws IOException {
         try (ServerSocket listener = new ServerSocket(11111)) {
