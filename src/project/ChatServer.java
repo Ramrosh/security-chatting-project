@@ -5,164 +5,68 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
-public class ChatServer implements Runnable { // runnable interface has the run method that threads execute
+import static project.utils.ConsolePrintingColors.ANSI_BLUE;
+import static project.utils.ConsolePrintingColors.ANSI_RESET;
+
+public class ChatServer implements Runnable {
 
     private Socket socket;
     private Hasher hasher;
+    private Scanner inputFromSocket;
+    private PrintWriter outputToSocket;
 
     ChatServer(Socket socket) {
         this.socket = socket;
         hasher = new Hasher();
     }
 
-    public int getPortNum(String receiverPhoneNumber){
-        int mod = Integer.parseInt(receiverPhoneNumber)%10000;
-        int base = Integer.parseInt(receiverPhoneNumber)/10000 -90000;
-        int newPort = base+mod;
+    public int getPortNum(String receiverPhoneNumber) {
+        int mod = Integer.parseInt(receiverPhoneNumber) % 10000;
+        int base = Integer.parseInt(receiverPhoneNumber) / 10000 - 90000;
+        int newPort = base + mod;
         return Math.abs(newPort);
     }
+
     @Override
     public void run() {
         System.out.println("Connected: " + socket);
         try {
-            Scanner inputFromSocket = new Scanner(socket.getInputStream());//input from client
-            PrintWriter outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
+            this.inputFromSocket = new Scanner(socket.getInputStream());//input from client
+            this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
             while (inputFromSocket.hasNextLine()) {
                 String clientRequestChoice = inputFromSocket.nextLine();
                 switch (clientRequestChoice) {
                     case "login": {
-                        //get phone number and password from client
-                        String phoneNumber = inputFromSocket.nextLine();
-                        String password = inputFromSocket.nextLine();
-                        //get user's hashed password from db
-                        String hashedPassword = DBConnector.getUserHashedPassword(phoneNumber);
-                        boolean validPassword = false;
-                        if (!hashedPassword.contains("error"))//check if password retrieval passed
-                        {
-                            //check password validity
-                            validPassword = this.hasher.authenticate(password.toCharArray(), hashedPassword);
-                        }
-                        //output response to client
-                        String response = validPassword ? "logged in successfully" : "error in logging in";
-                        outputToSocket.println(response);
-                        //if valid add phoneNumber and port to socketIdPairs
-                        if (validPassword) {
-                            PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
-                            System.out.println(PortIdCollection.portIDPairs);
-                        }
+                        this.handleUserLogin();
                         break;
                     }
                     case "signup": {
-                        //get phone number and password from client
-                        String phoneNumber = inputFromSocket.nextLine();
-                        String password = inputFromSocket.nextLine();
-                        String hashedPassword = this.hasher.hash(password.toCharArray());
-
-                        String successOrErrorMessage = DBConnector.signup(phoneNumber, hashedPassword);
-                        //output response to client
-                        outputToSocket.println(successOrErrorMessage);
-                        //if valid add phoneNumber and port to socketIdPairs
-                        if (!successOrErrorMessage.contains("error")) {
-                            PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
-                            System.out.println(PortIdCollection.portIDPairs);
-                        }
+                        this.handleUserSignup();
                         break;
                     }
                     case "sendMessage": {
-                        String clientPhoneNumber = inputFromSocket.nextLine();
-                        String contactChoice = inputFromSocket.nextLine();
-                        String receiverNumber = "";
-                        switch (contactChoice) {
-                            case "newContact": {
-                                receiverNumber = inputFromSocket.nextLine();
-                                String successOrErrorMessage = DBConnector.addingContact(clientPhoneNumber, receiverNumber);
-                                //output response to client
-                                outputToSocket.println(successOrErrorMessage);
-                                break;
-                            }
-                            case "oldContact": {
-                                ArrayList<String> contacts = DBConnector.getContacts(clientPhoneNumber);
-                                for (String s : contacts) {
-                                    System.out.println(s);
-                                }
-                                outputToSocket.println(contacts.size()); // send the size so the client can iterate over it
-                                for (String contact : contacts)
-                                    outputToSocket.println(contact);
-                                receiverNumber = inputFromSocket.nextLine();
-                                break;
-                            }
-                            default:
-                                break;
-                        }
-                        if (!(contactChoice.equals("newContact") || contactChoice.equals("oldContact"))) break;
-                        StringBuilder message = new StringBuilder();
-                        String str = "";
-                        while (!(str = inputFromSocket.nextLine()).equals("#send")) {
-                            System.out.println(str);
-                            message.append(str).append(" ");
-                        }
-                        System.out.println("contactChoice " + contactChoice);
-                        System.out.println("clientPhoneNumber : " + clientPhoneNumber);
-                        System.out.println("receiverNumber : " + receiverNumber);
-                        System.out.println("message : " + message);
-                        // save the message into db
-                        String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber,
-                                message.toString());
-                        //output response to client
-                        outputToSocket.println(successOrErrorMessage);
-                        // send the message for the other client
-                        if(PortIdCollection.online(receiverNumber)){
-                            System.out.println("other socket: host and port " +InetAddress.getLocalHost()+ getPortNum(receiverNumber) );
-                            Socket otherSocket = new Socket(InetAddress.getLocalHost(),getPortNum(receiverNumber));
-                            PrintWriter outputToOtherSocket;
-                            outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
-                            String response = "new message arrived from : " +clientPhoneNumber + ", content: "+message;
-                            outputToOtherSocket.println(response);
-                        }else System.out.println("the other is not online");
+                        this.handleUserMessageSending();
                         break;
                     }
                     case "showMessages": {
-                        String clientPhoneNumber = inputFromSocket.nextLine();
-                        System.out.println("showing messages to " + clientPhoneNumber);
-                        // get the messages of the client
-                        ArrayList<HashMap> result = DBConnector.getMessages(clientPhoneNumber);
-                        outputToSocket.println(result.size());
-                        for (HashMap hashMap : result) {
-                            String message = "";
-                            if (clientPhoneNumber.equals(hashMap.get("sender_phone_number"))) {
-                                message = "From: Me, To: " + hashMap.get("receiver_phone_number") +
-                                        ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
-                            } else if (clientPhoneNumber.equals(hashMap.get("receiver_phone_number"))) {
-                                message = "From: " + hashMap.get("sender_phone_number") + ", To: ME" +
-                                        ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
-                            } else {
-                                message = "Saved Message:" +
-                                        ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
-                            }
-                            outputToSocket.println(message);
-                        }
+                        this.handleUserMessagesPreview();
                         break;
                     }
                     case "logout": {
-                        String clientPhoneNumber = inputFromSocket.nextLine();
-                        PortIdCollection.setOffline(clientPhoneNumber);
                         System.out.println("logging out");
                         break;
                     }
                     default: {
-                        outputToSocket.close();
-                        inputFromSocket.close();
-                        socket.close();
                         break;
                     }
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
             System.out.println("Error:" + socket);
         } finally {
             try {
@@ -171,6 +75,137 @@ public class ChatServer implements Runnable { // runnable interface has the run 
                 e.printStackTrace();
             }
             System.out.println("Closed: " + socket);
+        }
+    }
+
+    //handling inputs and outputs of requests&responses methods
+    private void handleUserLogin() {
+        //get phone number and password from client
+        String phoneNumber = inputFromSocket.nextLine();
+        String password = inputFromSocket.nextLine();
+        //get user's hashed password from db
+        String hashedPassword = DBConnector.getUserHashedPassword(phoneNumber);
+        boolean validPassword = false;
+        if (!hashedPassword.contains("error"))//check if password retrieval passed
+        {
+            //check password validity
+            validPassword = this.hasher.authenticate(password.toCharArray(), hashedPassword);
+        }
+        //output response to client
+        String response = validPassword ? "logged in successfully" : "error in logging in";
+        outputToSocket.println(response);
+        //if valid add phoneNumber and port to socketIdPairs
+        if (validPassword) {
+            PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
+            System.out.println(PortIdCollection.portIDPairs);
+        }
+    }
+
+    private void handleUserSignup() {
+        //get phone number and password from client
+        String phoneNumber = inputFromSocket.nextLine();
+        String password = inputFromSocket.nextLine();
+        String hashedPassword = this.hasher.hash(password.toCharArray());
+
+        String successOrErrorMessage = DBConnector.signup(phoneNumber, hashedPassword);
+        //output response to client
+        outputToSocket.println(successOrErrorMessage);
+        //if valid add phoneNumber and port to socketIdPairs
+        if (!successOrErrorMessage.contains("error")) {
+            PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
+            System.out.println(PortIdCollection.portIDPairs);
+        }
+    }
+
+    private void handleUserMessageSending() {
+        String clientPhoneNumber = inputFromSocket.nextLine();
+        String contactChoice = inputFromSocket.nextLine();
+        String receiverNumber = "";
+        boolean hasError = false;
+        switch (contactChoice) {
+            case "newContact": {
+                receiverNumber = inputFromSocket.nextLine();
+                String successOrErrorMessage = DBConnector.addingContact(clientPhoneNumber, receiverNumber);
+                if (successOrErrorMessage.contains("error")) {
+                    hasError = true;
+                }
+                //output response to client
+                outputToSocket.println(successOrErrorMessage);
+                break;
+            }
+            case "oldContact": {
+                ArrayList<String> contacts = DBConnector.getContacts(clientPhoneNumber);
+                if (contacts.get(0).contains("error")) {
+                    hasError = true;
+                }
+                for (String s : contacts) {
+                    System.out.println(s);
+                }
+                outputToSocket.println(contacts.size()); // send the size so the client can iterate over it
+                for (String contact : contacts)
+                    outputToSocket.println(contact);
+                if (!hasError)
+                    receiverNumber = inputFromSocket.nextLine();
+                break;
+            }
+            default:
+                break;
+        }
+        if (!hasError)//if no error was received by db send the message
+        {
+            StringBuilder message = new StringBuilder();
+            String str = "";
+            while (!(str = inputFromSocket.nextLine()).equals("#send")) {
+                System.out.println(str);
+                message.append(str);
+            }
+            System.out.println("contactChoice " + contactChoice);
+            System.out.println("clientPhoneNumber : " + clientPhoneNumber);
+            System.out.println("receiverNumber : " + receiverNumber);
+            System.out.println("message : " + message);
+            // save the message into db
+            String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber,
+                    message.toString());
+            //output response to client
+            outputToSocket.println(successOrErrorMessage);
+            // send the message for the other client
+            try {
+                if (PortIdCollection.online(receiverNumber)) {
+                    System.out.println("other socket: host and port " + InetAddress.getLocalHost() + getPortNum(receiverNumber));
+                    Socket otherSocket = new Socket(InetAddress.getLocalHost(), getPortNum(receiverNumber));
+                    PrintWriter outputToOtherSocket;
+                    outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
+                    String response = ANSI_BLUE +"new message arrived from : " + clientPhoneNumber + ", content: " + message + ANSI_RESET;
+                    outputToOtherSocket.println(response);
+                } else System.out.println("the other is not online");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private void handleUserMessagesPreview() {
+        String clientPhoneNumber = inputFromSocket.nextLine();
+        System.out.println("showing messages to " + clientPhoneNumber);
+        // get the messages of the client
+        ArrayList<HashMap> result = DBConnector.getMessages(clientPhoneNumber);
+        System.out.println("messages result = " + result);
+        outputToSocket.println(result.size());
+        for (HashMap hashMap : result) {
+            String message = "";
+            if (clientPhoneNumber.equals(hashMap.get("sender_phone_number"))) {
+                message = "From: Me, To: " + hashMap.get("receiver_phone_number") +
+                        ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
+            } else if (clientPhoneNumber.equals(hashMap.get("receiver_phone_number"))) {
+                message = "From: " + hashMap.get("sender_phone_number") + ", To: ME" +
+                        ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
+            } else if (hashMap.containsKey("error")) {
+                message = hashMap.get("error").toString();
+            } else {
+                message = "Saved Message:" +
+                        ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
+            }
+            outputToSocket.println(message);
         }
     }
 }

@@ -16,16 +16,16 @@ public class DBConnector {
         String MySQLURL = "jdbc:mysql://127.0.0.1:3306/chat-app";
         String databaseUserName = "root";
         String databasePassword = "";
-        Connection con = null;
+        Connection connection = null;
         try {
-            con = DriverManager.getConnection(MySQLURL, databaseUserName, databasePassword);
+            connection = DriverManager.getConnection(MySQLURL, databaseUserName, databasePassword);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-        if (con != null) {
+        if (connection != null) {
             System.out.println("Database connection is successful !!!!");
-            return con;
+            return connection;
         }
         return null;
     }
@@ -199,7 +199,7 @@ public class DBConnector {
             {
                 HashMap error = new HashMap(1);
                 ArrayList<HashMap> errors = new ArrayList<>();
-                error.put("error" , "error: there is no messages");
+                error.put("error" , "there is no messages");
                 errors.add(error);
                 return errors;
             } else // return result
