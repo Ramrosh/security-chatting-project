@@ -3,6 +3,7 @@ package project;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 
 import java.util.ArrayList;
@@ -11,35 +12,44 @@ import java.util.Scanner;
 public class ChatClient {
     //attributes
     boolean isLoggedIn;
-    boolean isOn;
 
     private String myPhoneNumber;
 
     //constructor
     public ChatClient() {
         this.isLoggedIn = false;
-        this.isOn = false;
         this.myPhoneNumber = "";
     }
 
-    private void getMessages(Scanner inputFromSocket){
-        Thread getMessages = new Thread(){
+    public int getPortNum() {
+        int mod = Integer.parseInt(myPhoneNumber) % 10000;
+        int base = Integer.parseInt(myPhoneNumber) / 10000 - 90000;
+        int newPort = base + mod;
+        return Math.abs(newPort);
+    }
+
+    private void getMessages() {
+        Thread getMessages = new Thread() {
             @Override
-            public void run(){
-                String messageReceived ="", senderPhoneNumber = "";
-                while (isOn){
-                    System.out.println("waiting messages...");
-                    if(inputFromSocket.hasNextBoolean()){
-                        inputFromSocket.nextBoolean();
-                        senderPhoneNumber = inputFromSocket.next();
-                        messageReceived = inputFromSocket.nextLine();
-                        System.out.println("new message arrived from :" +senderPhoneNumber);
-                        System.out.println(messageReceived);
+            public void run() {
+                try {ServerSocket getMessagesServerSocket = new ServerSocket(getPortNum());
+                    while (isLoggedIn) {
+                        Socket getMessagesSocket = getMessagesServerSocket.accept();
+                        Scanner inputFromOtherSocket = new Scanner(getMessagesSocket.getInputStream());
+                        String messageReceived = "";
+                        if(inputFromOtherSocket.hasNextLine()) {
+                            messageReceived = inputFromOtherSocket.nextLine();
+                            System.out.println(messageReceived);
+                        }
                     }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
             }
         };
+        System.out.println("start the thread");
         getMessages.start();
+        System.out.println("out the thread");
     }
 
     //methods
@@ -52,7 +62,6 @@ public class ChatClient {
             Scanner inputFromTerminal = new Scanner(System.in);
             Scanner inputFromSocket = new Scanner(socket.getInputStream());//input from server
             PrintWriter outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to server
-            //this.getMessages(inputFromSocket);
             clientRequests:
             do {
                 if (!this.isLoggedIn)//case the client is not logged in
@@ -79,9 +88,9 @@ public class ChatClient {
                             if (!response.contains("error")) {
                                 this.isLoggedIn = true;
                                 this.myPhoneNumber = phoneNumber;
-                                this.isOn = true;
                                 System.out.println("I am logged in now :) ");
                             }
+                            this.getMessages();
                             break;
                         }
                         case "2"://log in
@@ -103,9 +112,9 @@ public class ChatClient {
                             if (!response.contains("error")) {
                                 this.isLoggedIn = true;
                                 this.myPhoneNumber = phoneNumber;
-                                this.isOn = true;
                                 System.out.println("I am logged in now :) ");
                             }
+                            this.getMessages();
                             break;
                         }
                         case "3"://exit
@@ -149,7 +158,7 @@ public class ChatClient {
                                     outputToSocket.println("oldContact");
                                     // get numbers from the server
                                     int contactNumber = Integer.parseInt(inputFromSocket.nextLine());
-                                    System.out.println("contactNumber "+ contactNumber);
+                                    System.out.println("contactNumber " + contactNumber);
                                     ArrayList<String> MyContacts = new ArrayList<>();
                                     for (int i = 1; i <= contactNumber; i++) {
                                         String response = inputFromSocket.nextLine();
@@ -160,11 +169,11 @@ public class ChatClient {
                                     } else {
                                         System.out.println("choose the id of the number you want to send a message to:");
                                         for (int i = 1; i <= contactNumber; i++) {
-                                            System.out.println("(" + i + "): " + MyContacts.get(i-1));
+                                            System.out.println("(" + i + "): " + MyContacts.get(i - 1));
                                         }
                                         int id = inputFromTerminal.nextInt();
                                         receiverNumber = MyContacts.get(id - 1);
-                                        outputToSocket.print(receiverNumber);
+                                        outputToSocket.println(receiverNumber);
                                     }
                                     break;
                                 }
@@ -179,6 +188,7 @@ public class ChatClient {
                             while (!(message = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
                                 outputToSocket.println(message);
                             }
+                            outputToSocket.println("#send");
                             System.out.println("sending...");
                             //get response from server
                             String response = inputFromSocket.nextLine();
@@ -200,6 +210,7 @@ public class ChatClient {
                         case "3"://logout
                         {
                             this.isLoggedIn = false;
+                            outputToSocket.println(myPhoneNumber);
                             System.out.println("logged out Goodbye :)");
                             break;
                         }

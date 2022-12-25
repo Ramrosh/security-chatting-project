@@ -3,6 +3,7 @@ package project;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,6 +19,12 @@ public class ChatServer implements Runnable { // runnable interface has the run 
         hasher = new Hasher();
     }
 
+    public int getPortNum(String receiverPhoneNumber){
+        int mod = Integer.parseInt(receiverPhoneNumber)%10000;
+        int base = Integer.parseInt(receiverPhoneNumber)/10000 -90000;
+        int newPort = base+mod;
+        return Math.abs(newPort);
+    }
     @Override
     public void run() {
         System.out.println("Connected: " + socket);
@@ -94,9 +101,9 @@ public class ChatServer implements Runnable { // runnable interface has the run 
                         if (!(contactChoice.equals("newContact") || contactChoice.equals("oldContact"))) break;
                         StringBuilder message = new StringBuilder();
                         String str = "";
-                        while (!(str = inputFromSocket.nextLine()).isBlank()) {
+                        while (!(str = inputFromSocket.nextLine()).equals("#send")) {
                             System.out.println(str);
-                            message.append(str);
+                            message.append(str).append(" ");
                         }
                         System.out.println("contactChoice " + contactChoice);
                         System.out.println("clientPhoneNumber : " + clientPhoneNumber);
@@ -108,15 +115,14 @@ public class ChatServer implements Runnable { // runnable interface has the run 
                         //output response to client
                         outputToSocket.println(successOrErrorMessage);
                         // send the message for the other client
-                        /*int otherSocketPort = PortIdCollection.getSocketPort(receiverNumber);
-                        String host = PortIdCollection.getHost(receiverNumber);
-                        Socket otherSocket = new Socket(host, otherSocketPort);
-                        System.out.println("other socket: "+ otherSocket);
-                        PrintWriter outputToOtherSocket;
-                        outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
-                        outputToOtherSocket.print(true);
-                        outputToOtherSocket.println(clientPhoneNumber);
-                        outputToOtherSocket.println("content: " + message);*/
+                        if(PortIdCollection.online(receiverNumber)){
+                            System.out.println("other socket: host and port " +InetAddress.getLocalHost()+ getPortNum(receiverNumber) );
+                            Socket otherSocket = new Socket(InetAddress.getLocalHost(),getPortNum(receiverNumber));
+                            PrintWriter outputToOtherSocket;
+                            outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
+                            String response = "new message arrived from : " +clientPhoneNumber + ", content: "+message;
+                            outputToOtherSocket.println(response);
+                        }else System.out.println("the other is not online");
                         break;
                     }
                     case "showMessages": {
@@ -142,6 +148,8 @@ public class ChatServer implements Runnable { // runnable interface has the run 
                         break;
                     }
                     case "logout": {
+                        String clientPhoneNumber = inputFromSocket.nextLine();
+                        PortIdCollection.setOffline(clientPhoneNumber);
                         System.out.println("logging out");
                         break;
                     }
@@ -154,6 +162,7 @@ public class ChatServer implements Runnable { // runnable interface has the run 
                 }
             }
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println("Error:" + socket);
         } finally {
             try {

@@ -25,4 +25,21 @@ public class PortIdCollection {
             throw new RuntimeException(e);
         }
     }
+
+    public static void setOffline(String clientPhoneNumber) {
+        for (int i = 0; i < portIDPairs.size(); i++) {
+            if(portIDPairs.get(i).id.equals(clientPhoneNumber)){
+                portIDPairs.remove(i);
+            }
+        }
+    }
+
+    public static boolean online(String receiverNumber) {
+        for (int i = 0; i < portIDPairs.size(); i++) {
+            if(portIDPairs.get(i).id.equals(receiverNumber)){
+                return true;
+            }
+        }
+        return false;
+    }
 }
