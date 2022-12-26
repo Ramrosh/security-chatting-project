@@ -10,8 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
-import static project.utils.ConsolePrintingColors.ANSI_BLUE;
-import static project.utils.ConsolePrintingColors.ANSI_RESET;
+import static project.utils.ConsolePrintingColors.*;
 
 public class ChatServer implements Runnable {
 
@@ -58,6 +57,8 @@ public class ChatServer implements Runnable {
                         break;
                     }
                     case "logout": {
+                        String clientPhoneNumber = inputFromSocket.nextLine();
+                        PortIdCollection.setOffline(clientPhoneNumber);
                         System.out.println("logging out");
                         break;
                     }
@@ -67,9 +68,12 @@ public class ChatServer implements Runnable {
                 }
             }
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println("Error:" + socket);
         } finally {
             try {
+                inputFromSocket.close();
+                outputToSocket.close();
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -173,10 +177,11 @@ public class ChatServer implements Runnable {
                 if (PortIdCollection.online(receiverNumber)) {
                     System.out.println("other socket: host and port " + InetAddress.getLocalHost() + getPortNum(receiverNumber));
                     Socket otherSocket = new Socket(InetAddress.getLocalHost(), getPortNum(receiverNumber));
-                    PrintWriter outputToOtherSocket;
-                    outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
+                    PrintWriter outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
                     String response = ANSI_BLUE +"new message arrived from : " + clientPhoneNumber + ", content: " + message + ANSI_RESET;
                     outputToOtherSocket.println(response);
+                    outputToOtherSocket.close();
+                    otherSocket.close();
                 } else System.out.println("the other is not online");
             } catch (IOException e) {
                 throw new RuntimeException(e);

@@ -9,8 +9,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-import static project.utils.ConsolePrintingColors.ANSI_GREEN;
-import static project.utils.ConsolePrintingColors.ANSI_RESET;
+import static project.utils.ConsolePrintingColors.*;
 
 public class ChatClient {
     //attributes
@@ -45,6 +44,7 @@ public class ChatClient {
             this.inputFromTerminal = new Scanner(System.in);
             this.inputFromSocket = new Scanner(socket.getInputStream());//input from server
             this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to server
+            ClientGetMessages clientGetMessages = new ClientGetMessages();
             clientRequests:
             do {
                 if (!this.isLoggedIn)//case the client is not logged in
@@ -55,20 +55,23 @@ public class ChatClient {
                         case "1"://sign up
                         {
                             this.requestSignup();
-                            this.getMessages();
+                            clientGetMessages = new ClientGetMessages();
+                            clientGetMessages.start();
                             break;
                         }
                         case "2"://log in
                         {
-                           this.requestLogin();
-                            this.getMessages();
+                            this.requestLogin();
+                            clientGetMessages = new ClientGetMessages();
+                            clientGetMessages.start();
                             break;
                         }
                         case "3"://exit
                         {
-                            outputToSocket.close();
-                            inputFromSocket.close();
+                            this.requestExiting();
+                            clientGetMessages.stopGetMessages();
                             socket.close();
+                            System.out.println(ANSI_PURPLE +"exiting ...see ya :)" + ANSI_RESET);
                             break clientRequests;
                         }
                         default:
@@ -92,14 +95,16 @@ public class ChatClient {
                         case "3"://logout
                         {
                             this.resetClientState();
-                            System.out.println("logged out Goodbye :)");
+                            clientGetMessages.stopGetMessages();
+                            System.out.println("logged out :)");
                             break;
                         }
                         case "4"://exit
                         {
-                            outputToSocket.close();
-                            inputFromSocket.close();
+                            this.requestExiting();
+                            clientGetMessages.stopGetMessages();
                             socket.close();
+                            System.out.println(ANSI_PURPLE +"exiting ...see ya :)" + ANSI_RESET);
                             break clientRequests;
                         }
                         default:
@@ -111,8 +116,9 @@ public class ChatClient {
             e.printStackTrace();
         }
     }
+
     //handling requests
-    private void requestLogin(){
+    private void requestLogin() {
         //send to  server that it is login request
         outputToSocket.println("login");
         //input signup parameters
@@ -130,10 +136,11 @@ public class ChatClient {
         if (!response.contains("error")) {
             this.isLoggedIn = true;
             this.myPhoneNumber = phoneNumber;
-            System.out.println(ANSI_GREEN+"I am logged in now :) "+ANSI_RESET);
+            System.out.println(ANSI_GREEN + "I am logged in now :) " + ANSI_RESET);
         }
     }
-    private void requestSignup(){
+
+    private void requestSignup() {
         //send to  server that it is signup request
         outputToSocket.println("signup");
         //input signup parameters
@@ -151,10 +158,11 @@ public class ChatClient {
         if (!response.contains("error")) {
             this.isLoggedIn = true;
             this.myPhoneNumber = phoneNumber;
-            System.out.println(ANSI_GREEN+"I am logged in now :) "+ANSI_RESET);
+            System.out.println(ANSI_GREEN + "I am logged in now :) " + ANSI_RESET);
         }
     }
-    private void requestSendingNewMessage(){
+
+    private void requestSendingNewMessage() {
         //send to  server that it is sending message request
         outputToSocket.println("sendMessage");
         outputToSocket.println(myPhoneNumber);
@@ -162,7 +170,7 @@ public class ChatClient {
         System.out.println("Enter 1 to add a new contact , 2 to choose from saved contact");
         String sendingChoice = inputFromTerminal.nextLine();
         String receiverNumber = "";
-        boolean hasError=false;
+        boolean hasError = false;
         switch (sendingChoice) {
             case "1": // add a new contact
             {
@@ -172,9 +180,8 @@ public class ChatClient {
                 outputToSocket.println(receiverNumber);
                 // check if the number existed ...get response from server
                 String response = inputFromSocket.nextLine();
-                if (response.contains("error"))
-                {
-                    hasError=true;
+                if (response.contains("error")) {
+                    hasError = true;
                 }
                 System.out.println("response from server ( " + response + " )");
                 break;
@@ -184,19 +191,19 @@ public class ChatClient {
                 outputToSocket.println("oldContact");
                 // get numbers from the server
                 int contactNumber = Integer.parseInt(inputFromSocket.nextLine());
-                System.out.println("contactNumber "+ contactNumber);
+                System.out.println("contactNumber " + contactNumber);
                 ArrayList<String> MyContacts = new ArrayList<>();
                 for (int i = 1; i <= contactNumber; i++) {
                     String response = inputFromSocket.nextLine();
                     MyContacts.add(response);
                 }
                 if (MyContacts.get(0).contains("error")) {
-                    hasError=true;
+                    hasError = true;
                     System.out.println("response from server ( " + MyContacts.get(0) + " )");
                 } else {
                     System.out.println("choose the id of the number you want to send a message to:");
                     for (int i = 1; i <= contactNumber; i++) {
-                        System.out.println("(" + i + "): " + MyContacts.get(i-1));
+                        System.out.println("(" + i + "): " + MyContacts.get(i - 1));
                     }
                     int id = Integer.parseInt(inputFromTerminal.nextLine());
                     receiverNumber = MyContacts.get(id - 1);
@@ -207,7 +214,7 @@ public class ChatClient {
             default:
                 break;
         }
-        if(!hasError){
+        if (!hasError) {
             String TERMINATOR_STRING = "#send";
             System.out.println("enter the message: (press " + TERMINATOR_STRING + " to send)");
             String message;
@@ -221,7 +228,8 @@ public class ChatClient {
             System.out.println("response from server ( " + response + " )");
         }
     }
-    private void requestPreviewingOldMessages(){
+
+    private void requestPreviewingOldMessages() {
         System.out.println("reviewing messages");
         outputToSocket.println("showMessages");
         outputToSocket.println(myPhoneNumber);
@@ -232,32 +240,44 @@ public class ChatClient {
         }
     }
 
+    private void requestExiting(){
+        this.resetClientState();
+        outputToSocket.close();
+        inputFromSocket.close();
+    }
     //util methods
 
-    private void getMessages() {
-        Thread getMessages = new Thread() {
-            @Override
-            public void run() {
-                try {ServerSocket getMessagesServerSocket = new ServerSocket(getPortNum());
-                    while (isLoggedIn) {
-                        Socket getMessagesSocket = getMessagesServerSocket.accept();
-                        Scanner inputFromOtherSocket = new Scanner(getMessagesSocket.getInputStream());
-                        String messageReceived = "";
-                        if(inputFromOtherSocket.hasNextLine()) {
-                            messageReceived = inputFromOtherSocket.nextLine();
-                            System.out.println(messageReceived);
-                        }
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+    private class ClientGetMessages extends Thread {
+        static ServerSocket getMessagesServerSocket;
+        public void stopGetMessages() {
+            try {
+                isLoggedIn = false;
+                getMessagesServerSocket.close();
+                this.interrupt();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        };
-        System.out.println("start the thread");
-        getMessages.start();
-        System.out.println("out the thread");
+        }
+        @Override
+        public void run() {
+            try {
+                getMessagesServerSocket = new ServerSocket(getPortNum());
+                while (isLoggedIn) {
+                    Socket getMessagesSocket = getMessagesServerSocket.accept();
+                    Scanner inputFromOtherSocket = new Scanner(getMessagesSocket.getInputStream());
+                    String messageReceived = "";
+                    if (inputFromOtherSocket.hasNextLine()) {
+                        messageReceived = inputFromOtherSocket.nextLine();
+                        System.out.println(messageReceived);
+                    }
+                }
+            } catch (IOException ignored) {
+            }
+        }
     }
-    private void resetClientState(){
+
+    private void resetClientState() {
+        outputToSocket.println(myPhoneNumber);
         this.isLoggedIn = false;
         this.myPhoneNumber = "";
     }
