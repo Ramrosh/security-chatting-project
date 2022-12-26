@@ -36,7 +36,7 @@ public class PortIdCollection {
 
     public static boolean online(String receiverNumber) {
         for (int i = 0; i < portIDPairs.size(); i++) {
-            if(portIDPairs.get(i).id.equals(receiverNumber)){
+                if(portIDPairs.get(i).id.equals(receiverNumber)){
                 return true;
             }
         }
