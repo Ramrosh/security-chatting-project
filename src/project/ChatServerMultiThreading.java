@@ -12,7 +12,7 @@ public class ChatServerMultiThreading {
             System.out.println("The chat server is running...");
             ExecutorService pool = Executors.newFixedThreadPool(20);
             while (true) {
-                pool.execute(new ChatServer(listener.accept()));
+                    pool.execute(new ChatServer(listener.accept()));
             }
         }
     }
