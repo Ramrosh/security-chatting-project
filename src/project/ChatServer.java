@@ -1,6 +1,10 @@
 package project;
 
 
+import project.cryptography.symmetric.Symmetric;
+
+import javax.crypto.SecretKey;
+import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -105,13 +109,14 @@ public class ChatServer implements Runnable {
         }
     }
 
-    private void handleUserSignup() {
+
+    private void handleUserSignup() throws Exception {
         //get phone number and password from client
         String phoneNumber = inputFromSocket.nextLine();
         String password = inputFromSocket.nextLine();
         String hashedPassword = this.hasher.hash(password.toCharArray());
-
-        String successOrErrorMessage = DBConnector.signup(phoneNumber, hashedPassword);
+        String secretKey = DatatypeConverter.printHexBinary(Symmetric.generateAESKey().getEncoded());
+        String successOrErrorMessage = DBConnector.signup(phoneNumber, hashedPassword, secretKey);
         //output response to client
         outputToSocket.println(successOrErrorMessage);
         //if valid add phoneNumber and port to socketIdPairs
@@ -148,8 +153,7 @@ public class ChatServer implements Runnable {
                 outputToSocket.println(contacts.size()); // send the size so the client can iterate over it
                 for (String contact : contacts)
                     outputToSocket.println(contact);
-                if (!hasError)
-                    receiverNumber = inputFromSocket.nextLine();
+                if (!hasError) receiverNumber = inputFromSocket.nextLine();
                 break;
             }
             default:
@@ -168,8 +172,7 @@ public class ChatServer implements Runnable {
             System.out.println("receiverNumber : " + receiverNumber);
             System.out.println("message : " + message);
             // save the message into db
-            String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber,
-                    message.toString());
+            String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber, message.toString());
             //output response to client
             outputToSocket.println(successOrErrorMessage);
             // send the message for the other client
@@ -178,7 +181,7 @@ public class ChatServer implements Runnable {
                     System.out.println("other socket: host and port " + InetAddress.getLocalHost() + getPortNum(receiverNumber));
                     Socket otherSocket = new Socket(InetAddress.getLocalHost(), getPortNum(receiverNumber));
                     PrintWriter outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
-                    String response = ANSI_BLUE +"new message arrived from : " + clientPhoneNumber + ", content: " + message + ANSI_RESET;
+                    String response = ANSI_BLUE + "new message arrived from : " + clientPhoneNumber + ", content: " + message + ANSI_RESET;
                     outputToOtherSocket.println(response);
                     outputToOtherSocket.close();
                     otherSocket.close();
@@ -199,16 +202,13 @@ public class ChatServer implements Runnable {
         for (HashMap hashMap : result) {
             String message = "";
             if (clientPhoneNumber.equals(hashMap.get("sender_phone_number"))) {
-                message = "From: Me, To: " + hashMap.get("receiver_phone_number") +
-                        ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
+                message = "From: Me, To: " + hashMap.get("receiver_phone_number") + ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
             } else if (clientPhoneNumber.equals(hashMap.get("receiver_phone_number"))) {
-                message = "From: " + hashMap.get("sender_phone_number") + ", To: ME" +
-                        ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
+                message = "From: " + hashMap.get("sender_phone_number") + ", To: ME" + ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
             } else if (hashMap.containsKey("error")) {
                 message = hashMap.get("error").toString();
             } else {
-                message = "Saved Message:" +
-                        ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
+                message = "Saved Message:" + ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
             }
             outputToSocket.println(message);
         }

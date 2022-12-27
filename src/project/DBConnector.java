@@ -35,15 +35,16 @@ public class DBConnector {
      */
 
     /************************************ User ***********************************/
-    private static String addUser(String phoneNumber, String password) {
+    private static String addUser(String phoneNumber, String password, String secretKey) {
         Connection connection = connect();
-        String insertSQL = "INSERT INTO users (phone_number,password) VALUES (?, ?)";
+        String insertSQL = "INSERT INTO users (phone_number,password,secret_key) VALUES (?, ?, ?)";
         try {
             assert connection != null : "connection error";
             assert (phoneNumber.length() <= 10 && phoneNumber.matches("\\d+") && password.length() <= 50) : "invalid input";
             PreparedStatement preparedStatement = connection.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS);
             preparedStatement.setString(1, phoneNumber);
             preparedStatement.setString(2, password);
+            preparedStatement.setString(3, secretKey);
             int affectedRows = preparedStatement.executeUpdate();
             assert affectedRows > 0 : "error while inserting";
         } catch (SQLException | AssertionError exception) {
@@ -134,8 +135,8 @@ public class DBConnector {
             ResultSet contacts = preparedStatement.executeQuery();
             ArrayList<String> contactResultList = new ArrayList<>();
             while (contacts.next()) {
-                String str =contacts.getString("added_phone_number");
-                System.out.println("in db connector "+ str);
+                String str = contacts.getString("added_phone_number");
+                System.out.println("in db connector " + str);
                 contactResultList.add(str);
             }
             if (contactResultList.isEmpty())//case no contact exist
@@ -187,11 +188,11 @@ public class DBConnector {
             preparedStatement.setString(2, clientPhoneNumber);
             ResultSet messages = preparedStatement.executeQuery();
             ArrayList<HashMap> messagesResultList = new ArrayList<>();
-            while (messages.next()){
+            while (messages.next()) {
                 HashMap row = new HashMap(4);
-                row.put("sender_phone_number",messages.getString("sender_phone_number"));
-                row.put("receiver_phone_number",messages.getString("receiver_phone_number"));
-                row.put("content",messages.getString("content"));
+                row.put("sender_phone_number", messages.getString("sender_phone_number"));
+                row.put("receiver_phone_number", messages.getString("receiver_phone_number"));
+                row.put("content", messages.getString("content"));
                 row.put("sent_at", messages.getObject("sent_at"));
                 messagesResultList.add(row);
             }
@@ -199,7 +200,7 @@ public class DBConnector {
             {
                 HashMap error = new HashMap(1);
                 ArrayList<HashMap> errors = new ArrayList<>();
-                error.put("error" , "there is no messages");
+                error.put("error", "there is no messages");
                 errors.add(error);
                 return errors;
             } else // return result
@@ -210,7 +211,7 @@ public class DBConnector {
             exception.printStackTrace();
             HashMap error = new HashMap(1);
             ArrayList<HashMap> errors = new ArrayList<>();
-            error.put("error","sql error : " + exception.getMessage());
+            error.put("error", "sql error : " + exception.getMessage());
             errors.add(error);
             return errors;
         }
@@ -219,8 +220,8 @@ public class DBConnector {
     /*
      * here goes all methods that interact with db using a connection instance
      * */
-    public static String signup(String phoneNumber, String password) {
-        return addUser(phoneNumber, password);
+    public static String signup(String phoneNumber, String password, String secretKey) {
+        return addUser(phoneNumber, password, secretKey);
     }
 
     public static String getUserHashedPassword(String phoneNumber) {
