@@ -2,13 +2,10 @@ package project;
 
 import project.cryptography.symmetric.Symmetric;
 
-import javax.xml.bind.DatatypeConverter;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-
 import java.util.*;
 
 import static project.utils.ConsolePrintingColors.*;
@@ -195,7 +192,7 @@ public class ChatClient {
                 receiverNumber = inputFromTerminal.nextLine();
                 outputToSocket.println(receiverNumber);
                 // check if the number existed ...get response from server
-                String response = inputFromSocket.nextLine();
+                String response = decryptFromServer();
                 if (response.contains("error")) {
                     hasError = true;
                 }
@@ -206,12 +203,11 @@ public class ChatClient {
             {
                 outputToSocket.println("oldContact");
                 // get numbers from the server
-                int contactNumber = Integer.parseInt(inputFromSocket.nextLine());
+                int contactNumber = Integer.parseInt(decryptFromServer());
                 System.out.println("contactNumber " + contactNumber);
                 ArrayList<String> MyContacts = new ArrayList<>();
                 for (int i = 1; i <= contactNumber; i++) {
-                    String response = inputFromSocket.nextLine();
-                    MyContacts.add(response);
+                    MyContacts.add(decryptFromServer());
                 }
                 if (MyContacts.get(0).contains("error")) {
                     hasError = true;
@@ -235,16 +231,12 @@ public class ChatClient {
             System.out.println("enter the message: (press " + TERMINATOR_STRING + " to send)");
             String message;
             while (!(message = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
-                byte[] iv = Symmetric.generateIV();
-                String encryptedMessage = Symmetric.encrypt(message, keys.get(myPhoneNumber), iv);
-                outputToSocket.println(encryptedMessage);
-                outputToSocket.println(Base64.getEncoder().encodeToString(iv));
+                encryptToServer(message);
             }
-            outputToSocket.println("#send");
+            encryptToServer(TERMINATOR_STRING);
             System.out.println("sending...");
             //get response from server
-            String response = inputFromSocket.nextLine();
-            System.out.println("response from server ( " + response + " )");
+            System.out.println("Response from server ( " + decryptFromServer() + " )");
         }
     }
 
@@ -252,10 +244,9 @@ public class ChatClient {
         System.out.println("reviewing messages");
         outputToSocket.println("showMessages");
         outputToSocket.println(myPhoneNumber);
-        int messagesNumber = Integer.parseInt(inputFromSocket.nextLine());
+        int messagesNumber = Integer.parseInt(decryptFromServer());
         for (int i = 0; i < messagesNumber; i++) {
-            String message = inputFromSocket.nextLine();
-            System.out.println(message);
+            System.out.println(decryptFromServer());
         }
     }
 
@@ -286,16 +277,10 @@ public class ChatClient {
                 while (isLoggedIn) {
                     Socket getMessagesSocket = getMessagesServerSocket.accept();
                     Scanner inputFromOtherSocket = new Scanner(getMessagesSocket.getInputStream());
-                    String messageReceived = "";
-
                     if (inputFromOtherSocket.hasNextLine()) {
-                        messageReceived = inputFromOtherSocket.nextLine();
-                        String iv = inputFromOtherSocket.nextLine();
-                        String decryptedMessage = Symmetric.decrypt(messageReceived,keys.get(myPhoneNumber),iv);
-                        System.out.println(decryptedMessage);
+                        System.out.println(decryptFromServer(inputFromOtherSocket));
                     }
                 }
-            } catch (IOException ignored) {
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -306,6 +291,27 @@ public class ChatClient {
         outputToSocket.println(myPhoneNumber);
         this.isLoggedIn = false;
         this.myPhoneNumber = "";
+    }
+
+    private void encryptToServer(String message) {
+        byte[] iv = Symmetric.generateIV();
+        String encryptedMessage = Symmetric.encrypt(message, keys.get(myPhoneNumber), iv);
+        if (encryptedMessage != null) {
+            outputToSocket.println(encryptedMessage);
+            outputToSocket.println(Base64.getEncoder().encodeToString(iv));
+        }
+    }
+
+    private String decryptFromServer() {
+        String messageReceived = inputFromSocket.nextLine();
+        String iv = inputFromSocket.nextLine();
+        return Symmetric.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
+    }
+
+    private String decryptFromServer(Scanner inputFromOtherSocket) {
+        String messageReceived = inputFromOtherSocket.nextLine();
+        String iv = inputFromOtherSocket.nextLine();
+        return Symmetric.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
     }
 
     public static void main(String[] args) {

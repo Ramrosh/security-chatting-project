@@ -3,22 +3,17 @@ package project;
 
 import project.cryptography.symmetric.Symmetric;
 
-import javax.crypto.SecretKey;
-import javax.xml.bind.DatatypeConverter;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Scanner;
 
-import static project.utils.ConsolePrintingColors.*;
+import static project.utils.ConsolePrintingColors.ANSI_BLUE;
+import static project.utils.ConsolePrintingColors.ANSI_RESET;
 
 public class ChatServer implements Runnable {
 
@@ -130,18 +125,10 @@ public class ChatServer implements Runnable {
         }
     }
 
-    private void handleUserMessageSending() throws Exception {
+    private void handleUserMessageSending() {
         String clientPhoneNumber = inputFromSocket.nextLine();
         String contactChoice = inputFromSocket.nextLine();
-        String clientSecretKey = "";
         String receiverNumber = "";
-        String successOrErrorKeyMessage = DBConnector.getUserSecretKey(clientPhoneNumber);
-        if (successOrErrorKeyMessage.contains("error")) {
-            // TODO: handle this
-            return;
-        } else {
-            clientSecretKey = successOrErrorKeyMessage;
-        }
         boolean hasError = false;
         switch (contactChoice) {
             case "newContact": {
@@ -150,8 +137,7 @@ public class ChatServer implements Runnable {
                 if (successOrErrorMessage.contains("error")) {
                     hasError = true;
                 }
-                //output response to client
-                outputToSocket.println(successOrErrorMessage);
+                encryptToClient(successOrErrorMessage, clientPhoneNumber);
                 break;
             }
             case "oldContact": {
@@ -162,9 +148,9 @@ public class ChatServer implements Runnable {
                 for (String s : contacts) {
                     System.out.println(s);
                 }
-                outputToSocket.println(contacts.size()); // send the size so the client can iterate over it
+                encryptToClient(String.valueOf(contacts.size()), clientPhoneNumber);
                 for (String contact : contacts)
-                    outputToSocket.println(contact);
+                    encryptToClient(contact, clientPhoneNumber);
                 if (!hasError) receiverNumber = inputFromSocket.nextLine();
                 break;
             }
@@ -175,12 +161,8 @@ public class ChatServer implements Runnable {
         {
             StringBuilder message = new StringBuilder();
             String str = "";
-            while (!(str = inputFromSocket.nextLine()).equals("#send")) {
-                String iv = inputFromSocket.nextLine();
-                String decryptedMessage = Symmetric.decrypt(str, clientSecretKey, iv);
-                if (decryptedMessage != null) {
-                    message.append(decryptedMessage);
-                }
+            while (!(str = decryptFromClient(clientPhoneNumber)).equals("#send")) {
+                message.append(str);
             }
             System.out.println("contactChoice " + contactChoice);
             System.out.println("clientPhoneNumber : " + clientPhoneNumber);
@@ -189,8 +171,7 @@ public class ChatServer implements Runnable {
             // save the message into db
             String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber, message.toString());
             //output response to client
-            // TODO: encrypt the response
-            outputToSocket.println(successOrErrorMessage);
+            encryptToClient(successOrErrorMessage, clientPhoneNumber);
             // send the message for the other client
             try {
                 if (PortIdCollection.online(receiverNumber)) {
@@ -198,19 +179,7 @@ public class ChatServer implements Runnable {
                     Socket otherSocket = new Socket(InetAddress.getLocalHost(), getPortNum(receiverNumber));
                     PrintWriter outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
                     String response = ANSI_BLUE + "new message arrived from : " + clientPhoneNumber + ", content: " + message + ANSI_RESET;
-                    String receiverKey = "";
-                    String receiverKeyMessage = DBConnector.getUserSecretKey(receiverNumber);
-                    if (receiverKeyMessage.contains("error")) {
-                        // TODO: handle this
-                        System.out.println("Cannot get receiver client key");
-                        return;
-                    } else {
-                        receiverKey = receiverKeyMessage;
-                    }
-                    byte[] iv = Symmetric.generateIV();
-                    String encodedResponse = Symmetric.encrypt(response, receiverKey, iv);
-                    outputToOtherSocket.println(encodedResponse);
-                    outputToOtherSocket.println(Base64.getEncoder().encodeToString(iv));
+                    encryptToClient(response, receiverNumber, outputToOtherSocket);
                     outputToOtherSocket.close();
                     otherSocket.close();
                 } else System.out.println("the other is not online");
@@ -226,7 +195,7 @@ public class ChatServer implements Runnable {
         // get the messages of the client
         ArrayList<HashMap> result = DBConnector.getMessages(clientPhoneNumber);
         System.out.println("messages result = " + result);
-        outputToSocket.println(result.size());
+        encryptToClient(String.valueOf(result.size()), clientPhoneNumber);
         for (HashMap hashMap : result) {
             String message = "";
             if (clientPhoneNumber.equals(hashMap.get("sender_phone_number"))) {
@@ -238,7 +207,42 @@ public class ChatServer implements Runnable {
             } else {
                 message = "Saved Message:" + ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
             }
-            outputToSocket.println(message);
+            encryptToClient(message, clientPhoneNumber);
         }
+    }
+
+    private void encryptToClient(String message, String clientPhoneNumber, PrintWriter outputToOtherSocket) {
+        String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
+        if (!userSecretKey.contains("error")) {
+            byte[] iv = Symmetric.generateIV();
+            String encryptedMessage = Symmetric.encrypt(message, userSecretKey, iv);
+            if (encryptedMessage != null) {
+                outputToOtherSocket.println(encryptedMessage);
+                outputToOtherSocket.println(Base64.getEncoder().encodeToString(iv));
+            }
+        }
+    }
+
+    private void encryptToClient(String message, String clientPhoneNumber) {
+        String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
+        if (!userSecretKey.contains("error")) {
+            byte[] iv = Symmetric.generateIV();
+            String encryptedMessage = Symmetric.encrypt(message, userSecretKey, iv);
+            if (encryptedMessage != null) {
+                outputToSocket.println(encryptedMessage);
+                outputToSocket.println(Base64.getEncoder().encodeToString(iv));
+            }
+        }
+    }
+
+
+    private String decryptFromClient(String clientPhoneNumber) {
+        String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
+        if (!userSecretKey.contains("error")) {
+            String messageReceived = inputFromSocket.nextLine();
+            String iv = inputFromSocket.nextLine();
+            return Symmetric.decrypt(messageReceived, userSecretKey, iv);
+        }
+        return null;
     }
 }
