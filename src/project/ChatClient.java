@@ -1,17 +1,33 @@
 package project;
 
+import project.cryptography.symmetric.Symmetric;
+
+import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.*;
 
 import static project.utils.ConsolePrintingColors.*;
 
 public class ChatClient {
+
+    /**
+     * We can use this map for getting user's secret key by [myPhoneNumber]
+     **/
+    private final Map<String, String> keys = new HashMap<>() {{
+        put("0933062132", "Sv3DSAebkWl1/52LqurnOCoJygpE3E3rda14OcjfQGk=");
+        put("0953954152", "QefDGTafpKCi/3WGg2TkAYRHFGSkhUiqOVE344jNsHM=");
+        put("0955222043", "P7lsK/e8rVi9xOtBU5Zvo5JX4ozeLK5M/6sT7mCAQkY=");
+        put("0955222044", "4n/1hyt6uMgQaJRqlooplo+uWhEAJWf5yyi2prTDW60=");
+        put("0992371147", "UDFxrAb9uZ2k8K49YigxXG85li1By+//+aL73gIqMD4=");
+        put("0992371148", "cVK0my61a3R+WVEH96ELehVJrpSuf+zb7E97jQpO9VA=");
+        put("0944815425", "9aM6rCwUZ5xtZjrRmXx0ZEpnnXK8JwybbABqam5AoCc=");
+    }};
+
     //attributes
     boolean isLoggedIn;
 
@@ -71,7 +87,7 @@ public class ChatClient {
                             this.requestExiting();
                             clientGetMessages.stopGetMessages();
                             socket.close();
-                            System.out.println(ANSI_PURPLE +"exiting ...see ya :)" + ANSI_RESET);
+                            System.out.println(ANSI_PURPLE + "exiting ...see ya :)" + ANSI_RESET);
                             break clientRequests;
                         }
                         default:
@@ -104,7 +120,7 @@ public class ChatClient {
                             this.requestExiting();
                             clientGetMessages.stopGetMessages();
                             socket.close();
-                            System.out.println(ANSI_PURPLE +"exiting ...see ya :)" + ANSI_RESET);
+                            System.out.println(ANSI_PURPLE + "exiting ...see ya :)" + ANSI_RESET);
                             break clientRequests;
                         }
                         default:
@@ -162,7 +178,7 @@ public class ChatClient {
         }
     }
 
-    private void requestSendingNewMessage() {
+    private void requestSendingNewMessage() throws Exception {
         //send to  server that it is sending message request
         outputToSocket.println("sendMessage");
         outputToSocket.println(myPhoneNumber);
@@ -219,7 +235,10 @@ public class ChatClient {
             System.out.println("enter the message: (press " + TERMINATOR_STRING + " to send)");
             String message;
             while (!(message = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
-                outputToSocket.println(message);
+                byte[] iv = Symmetric.generateIV();
+                String encryptedMessage = Symmetric.encrypt(message, keys.get(myPhoneNumber), iv);
+                outputToSocket.println(encryptedMessage);
+                outputToSocket.println(Base64.getEncoder().encodeToString(iv));
             }
             outputToSocket.println("#send");
             System.out.println("sending...");
@@ -240,7 +259,7 @@ public class ChatClient {
         }
     }
 
-    private void requestExiting(){
+    private void requestExiting() {
         this.resetClientState();
         outputToSocket.close();
         inputFromSocket.close();
@@ -249,6 +268,7 @@ public class ChatClient {
 
     private class ClientGetMessages extends Thread {
         static ServerSocket getMessagesServerSocket;
+
         public void stopGetMessages() {
             try {
                 isLoggedIn = false;
@@ -258,6 +278,7 @@ public class ChatClient {
                 e.printStackTrace();
             }
         }
+
         @Override
         public void run() {
             try {
@@ -266,12 +287,17 @@ public class ChatClient {
                     Socket getMessagesSocket = getMessagesServerSocket.accept();
                     Scanner inputFromOtherSocket = new Scanner(getMessagesSocket.getInputStream());
                     String messageReceived = "";
+
                     if (inputFromOtherSocket.hasNextLine()) {
                         messageReceived = inputFromOtherSocket.nextLine();
-                        System.out.println(messageReceived);
+                        String iv = inputFromOtherSocket.nextLine();
+                        String decryptedMessage = Symmetric.decrypt(messageReceived,keys.get(myPhoneNumber),iv);
+                        System.out.println(decryptedMessage);
                     }
                 }
             } catch (IOException ignored) {
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }

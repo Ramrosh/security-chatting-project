@@ -228,6 +228,10 @@ public class DBConnector {
         return findUser(phoneNumber, "password");
     }
 
+    public static String getUserSecretKey(String phoneNumber) {
+        return findUser(phoneNumber, "secret_key");
+    }
+
     public static String addingContact(String adderNumber, String addedNumber) {
         String findUserResult = findUser(addedNumber, "");
         String findContactResult = findContact(adderNumber, addedNumber);
@@ -248,5 +252,4 @@ public class DBConnector {
     public static String sendMessage(String senderPhoneNumber, String receiverNumber, String message) {
         return addMessage(senderPhoneNumber, receiverNumber, message);
     }
-
 }
