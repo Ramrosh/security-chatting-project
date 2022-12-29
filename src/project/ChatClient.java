@@ -1,6 +1,6 @@
 package project;
 
-import project.cryptography.symmetric.Symmetric;
+import project.cryptography.symmetric.AESEncryption;
 
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -294,8 +294,8 @@ public class ChatClient {
     }
 
     private void encryptToServer(String message) {
-        byte[] iv = Symmetric.generateIV();
-        String encryptedMessage = Symmetric.encrypt(message, keys.get(myPhoneNumber), iv);
+        byte[] iv = AESEncryption.generateIV();
+        String encryptedMessage = AESEncryption.encrypt(message, keys.get(myPhoneNumber), iv);
         if (encryptedMessage != null) {
             outputToSocket.println(encryptedMessage);
             outputToSocket.println(Base64.getEncoder().encodeToString(iv));
@@ -305,13 +305,13 @@ public class ChatClient {
     private String decryptFromServer() {
         String messageReceived = inputFromSocket.nextLine();
         String iv = inputFromSocket.nextLine();
-        return Symmetric.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
+        return AESEncryption.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
     }
 
     private String decryptFromServer(Scanner inputFromOtherSocket) {
         String messageReceived = inputFromOtherSocket.nextLine();
         String iv = inputFromOtherSocket.nextLine();
-        return Symmetric.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
+        return AESEncryption.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
     }
 
     public static void main(String[] args) {

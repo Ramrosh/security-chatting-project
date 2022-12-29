@@ -1,7 +1,8 @@
 package project;
 
 
-import project.cryptography.symmetric.Symmetric;
+import project.cryptography.asymmetric.RSAEncryption;
+import project.cryptography.symmetric.AESEncryption;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -114,7 +115,7 @@ public class ChatServer implements Runnable {
         String phoneNumber = inputFromSocket.nextLine();
         String password = inputFromSocket.nextLine();
         String hashedPassword = this.hasher.hash(password.toCharArray());
-        String secretKey = Base64.getEncoder().encodeToString(Symmetric.generateAESKey().getEncoded());
+        String secretKey = Base64.getEncoder().encodeToString(AESEncryption.generateAESKey().getEncoded());
         String successOrErrorMessage = DBConnector.signup(phoneNumber, hashedPassword, secretKey);
         //output response to client
         outputToSocket.println(successOrErrorMessage);
@@ -214,8 +215,8 @@ public class ChatServer implements Runnable {
     private void encryptToClient(String message, String clientPhoneNumber, PrintWriter outputToOtherSocket) {
         String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
         if (!userSecretKey.contains("error")) {
-            byte[] iv = Symmetric.generateIV();
-            String encryptedMessage = Symmetric.encrypt(message, userSecretKey, iv);
+            byte[] iv = AESEncryption.generateIV();
+            String encryptedMessage = AESEncryption.encrypt(message, userSecretKey, iv);
             if (encryptedMessage != null) {
                 outputToOtherSocket.println(encryptedMessage);
                 outputToOtherSocket.println(Base64.getEncoder().encodeToString(iv));
@@ -226,8 +227,8 @@ public class ChatServer implements Runnable {
     private void encryptToClient(String message, String clientPhoneNumber) {
         String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
         if (!userSecretKey.contains("error")) {
-            byte[] iv = Symmetric.generateIV();
-            String encryptedMessage = Symmetric.encrypt(message, userSecretKey, iv);
+            byte[] iv = AESEncryption.generateIV();
+            String encryptedMessage = AESEncryption.encrypt(message, userSecretKey, iv);
             if (encryptedMessage != null) {
                 outputToSocket.println(encryptedMessage);
                 outputToSocket.println(Base64.getEncoder().encodeToString(iv));
@@ -241,7 +242,7 @@ public class ChatServer implements Runnable {
         if (!userSecretKey.contains("error")) {
             String messageReceived = inputFromSocket.nextLine();
             String iv = inputFromSocket.nextLine();
-            return Symmetric.decrypt(messageReceived, userSecretKey, iv);
+            return AESEncryption.decrypt(messageReceived, userSecretKey, iv);
         }
         return null;
     }

@@ -8,7 +8,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.SecureRandom;
 import java.util.Base64;
 
-public class Symmetric {
+public class AESEncryption {
     private static final String AES = "AES";
 
     private static final String AES_CIPHER_ALGORITHM = "AES/GCM/NoPadding";
