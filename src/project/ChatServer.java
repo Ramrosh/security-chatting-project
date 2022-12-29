@@ -8,24 +8,28 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.security.Key;
+import java.util.*;
 
 import static project.utils.ConsolePrintingColors.ANSI_BLUE;
 import static project.utils.ConsolePrintingColors.ANSI_RESET;
 
 public class ChatServer implements Runnable {
+    private static final String REQUEST_PUBLIC_KEY = "Can I have your public key?";
 
-    private Socket socket;
-    private Hasher hasher;
     private Scanner inputFromSocket;
     private PrintWriter outputToSocket;
+
+    private final Socket socket;
+    private final Hasher hasher;
+    private final Key publicKey;
+    private String sessionKey;
+
 
     ChatServer(Socket socket) {
         this.socket = socket;
         hasher = new Hasher();
+        publicKey = RSAEncryption.getPublicKey();
     }
 
     public int getPortNum(String receiverPhoneNumber) {
@@ -41,6 +45,19 @@ public class ChatServer implements Runnable {
         try {
             this.inputFromSocket = new Scanner(socket.getInputStream());//input from client
             this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
+            String request = inputFromSocket.nextLine();
+            if (Objects.equals(request, REQUEST_PUBLIC_KEY)) {
+                System.out.println("Handshake Started :)");
+                System.out.println("Sending public key...");
+                outputToSocket.println(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
+                sessionKey = RSAEncryption.decrypt(inputFromSocket.nextLine());
+                System.out.println(sessionKey);
+                // TODO: send response telling user the session key is accepted
+            } else {
+                System.out.println("Handshake failed :(");
+                return;
+            }
+
             while (inputFromSocket.hasNextLine()) {
                 String clientRequestChoice = inputFromSocket.nextLine();
                 switch (clientRequestChoice) {

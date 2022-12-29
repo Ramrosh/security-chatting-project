@@ -41,8 +41,8 @@ public class RSAEncryption {
                 // Generate the KeyPair
                 KeyPair keyPair = keyPairGenerator.generateKeyPair();
                 // Get the public and private key
-                PublicKey publicKey = keyPair.getPublic();
-                PrivateKey privateKey = keyPair.getPrivate();
+                publicKey = keyPair.getPublic();
+                privateKey = keyPair.getPrivate();
                 // Get the RSAPublicKeySpec and RSAPrivateKeySpec
                 KeyFactory keyFactory = KeyFactory.getInstance(RSA);
                 RSAPublicKeySpec publicKeySpec = keyFactory.getKeySpec(publicKey, RSAPublicKeySpec.class);
@@ -94,6 +94,7 @@ public class RSAEncryption {
      * Important! do not use this function before initialize the RSA
      **/
     public static String encrypt(String plainText) throws Exception {
+        Key publicKey = readKeyFromFile(PublicKeyFile);
         // Get Cipher Instance
         Cipher cipher = Cipher.getInstance(RSA_CIPHER_ALGORITHM);
         // Initialize Cipher for ENCRYPT_MODE
@@ -105,10 +106,27 @@ public class RSAEncryption {
     }
 
     /**
+     * This function takes plaintext and the publicKey, and return the CipherText.
+     **/
+    public static String encrypt(String plainText, Key publicKey) throws Exception {
+        // Get Cipher Instance
+        Cipher cipher = Cipher.getInstance(RSA_CIPHER_ALGORITHM);
+        // Initialize Cipher for ENCRYPT_MODE
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        // Perform Encryption
+        byte[] cipherText = cipher.doFinal(plainText.getBytes());
+
+        return Base64.getEncoder().encodeToString(cipherText);
+    }
+
+
+    /**
      * This function takes CipherText, and return the plainText.
      * Important! do not use this function before initialize the RSA
      **/
     public static String decrypt(String cipherText) throws Exception {
+        Key privateKey = readKeyFromFile(PrivateKeyFile);
+
         byte[] cipherTextArray = Base64.getDecoder().decode(cipherText);
 
         // Get Cipher Instance
@@ -121,5 +139,14 @@ public class RSAEncryption {
         byte[] decryptedTextArray = cipher.doFinal(cipherTextArray);
 
         return new String(decryptedTextArray);
+    }
+
+    public static Key getPublicKey() {
+        try {
+            return readKeyFromFile(PublicKeyFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

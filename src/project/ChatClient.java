@@ -1,11 +1,17 @@
 package project;
 
+import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
+import javax.crypto.SecretKey;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 
 import static project.utils.ConsolePrintingColors.*;
@@ -24,6 +30,12 @@ public class ChatClient {
         put("0992371148", "cVK0my61a3R+WVEH96ELehVJrpSuf+zb7E97jQpO9VA=");
         put("0944815425", "9aM6rCwUZ5xtZjrRmXx0ZEpnnXK8JwybbABqam5AoCc=");
     }};
+
+    private static final String REQUEST_PUBLIC_KEY = "Can I have your public key?";
+
+    private String sessionKey;
+
+    private Key serverPublicKey;
 
     //attributes
     boolean isLoggedIn;
@@ -58,6 +70,17 @@ public class ChatClient {
             this.inputFromSocket = new Scanner(socket.getInputStream());//input from server
             this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to server
             ClientGetMessages clientGetMessages = new ClientGetMessages();
+            // request public key
+            outputToSocket.println(REQUEST_PUBLIC_KEY);
+            // initialize public key
+            serverPublicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(inputFromSocket.nextLine())));
+            System.out.println(serverPublicKey);
+            // initialize session key
+            sessionKey = Base64.getEncoder().encodeToString(AESEncryption.generateAESKey().getEncoded());
+            System.out.println(sessionKey);
+            // sending encrypted session key to the server
+            outputToSocket.println(RSAEncryption.encrypt(sessionKey, serverPublicKey));
+
             clientRequests:
             do {
                 if (!this.isLoggedIn)//case the client is not logged in
