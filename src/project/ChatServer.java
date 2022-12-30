@@ -7,13 +7,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.util.*;
 
 import static project.utils.ConsolePrintingColors.ANSI_BLUE;
 import static project.utils.ConsolePrintingColors.ANSI_RESET;
+import static project.utils.Constants.*;
 
 public class ChatServer implements Runnable {
 
@@ -162,7 +160,12 @@ public class ChatServer implements Runnable {
             StringBuilder message = new StringBuilder();
             String str = "";
             while (!(str = decryptFromClient(clientPhoneNumber)).equals("#send")) {
-                message.append(str);
+                if (Symmetric.verifyPlainText(str)) {
+                    message.append(str);
+                } else {
+                    encryptToClient(str, clientPhoneNumber);
+                    return;
+                }
             }
             System.out.println("contactChoice " + contactChoice);
             System.out.println("clientPhoneNumber : " + clientPhoneNumber);
@@ -216,11 +219,15 @@ public class ChatServer implements Runnable {
         if (!userSecretKey.contains("error")) {
             byte[] iv = Symmetric.generateIV();
             String encryptedMessage = Symmetric.encrypt(message, userSecretKey, iv);
-            if (encryptedMessage != null) {
+            String mac = Symmetric.generateMac(encryptedMessage, userSecretKey);
+            if (!Objects.equals(encryptedMessage, ENCRYPTION_ERROR_MESSAGE)) {
                 outputToOtherSocket.println(encryptedMessage);
                 outputToOtherSocket.println(Base64.getEncoder().encodeToString(iv));
+                outputToOtherSocket.println(mac);
             }
+            return;
         }
+        System.out.println(DATABASE_KEY_ERROR);
     }
 
     private void encryptToClient(String message, String clientPhoneNumber) {
@@ -228,21 +235,26 @@ public class ChatServer implements Runnable {
         if (!userSecretKey.contains("error")) {
             byte[] iv = Symmetric.generateIV();
             String encryptedMessage = Symmetric.encrypt(message, userSecretKey, iv);
-            if (encryptedMessage != null) {
+            String mac = Symmetric.generateMac(encryptedMessage, userSecretKey);
+            if (!Objects.equals(encryptedMessage, ENCRYPTION_ERROR_MESSAGE)) {
                 outputToSocket.println(encryptedMessage);
                 outputToSocket.println(Base64.getEncoder().encodeToString(iv));
+                outputToSocket.println(mac);
             }
+            return;
         }
+        System.out.println(DATABASE_KEY_ERROR);
     }
 
 
     private String decryptFromClient(String clientPhoneNumber) {
         String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
         if (!userSecretKey.contains("error")) {
-            String messageReceived = inputFromSocket.nextLine();
+            String message = inputFromSocket.nextLine();
             String iv = inputFromSocket.nextLine();
-            return Symmetric.decrypt(messageReceived, userSecretKey, iv);
+            String mac = inputFromSocket.nextLine();
+            return Symmetric.decrypt(message, userSecretKey, iv, mac);
         }
-        return null;
+        return DATABASE_KEY_ERROR;
     }
 }

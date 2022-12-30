@@ -60,7 +60,7 @@ public class DBConnector {
         try {
             assert connection != null : "connection error";
             assert (phoneNumber.length() <= 10 && phoneNumber.matches("\\d+")) : "invalid input";
-            assert (certainColumn.equals("password") || certainColumn.equals("phone_number")) : "invalid chosen column";
+            assert (certainColumn.equals("password") || certainColumn.equals("phone_number") || certainColumn.equals("secret_key")) : "invalid chosen column";
             PreparedStatement preparedStatement = connection.prepareStatement(findSQL);
             preparedStatement.setString(1, phoneNumber);
             ResultSet user = preparedStatement.executeQuery();

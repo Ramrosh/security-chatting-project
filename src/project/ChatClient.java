@@ -175,7 +175,7 @@ public class ChatClient {
         }
     }
 
-    private void requestSendingNewMessage() throws Exception {
+    private void requestSendingNewMessage() {
         //send to  server that it is sending message request
         outputToSocket.println("sendMessage");
         outputToSocket.println(myPhoneNumber);
@@ -203,25 +203,29 @@ public class ChatClient {
             {
                 outputToSocket.println("oldContact");
                 // get numbers from the server
-                int contactNumber = Integer.parseInt(decryptFromServer());
-                System.out.println("contactNumber " + contactNumber);
-                ArrayList<String> MyContacts = new ArrayList<>();
-                for (int i = 1; i <= contactNumber; i++) {
-                    MyContacts.add(decryptFromServer());
-                }
-                if (MyContacts.get(0).contains("error")) {
-                    hasError = true;
-                    System.out.println("response from server ( " + MyContacts.get(0) + " )");
-                } else {
-                    System.out.println("choose the id of the number you want to send a message to:");
+                String message = decryptFromServer();
+                if (Symmetric.verifyPlainText(message)) {
+                    int contactNumber = Integer.parseInt(message);
+                    System.out.println("contactNumber " + contactNumber);
+                    ArrayList<String> MyContacts = new ArrayList<>();
                     for (int i = 1; i <= contactNumber; i++) {
-                        System.out.println("(" + i + "): " + MyContacts.get(i - 1));
+                        MyContacts.add(decryptFromServer());
                     }
-                    int id = Integer.parseInt(inputFromTerminal.nextLine());
-                    receiverNumber = MyContacts.get(id - 1);
-                    outputToSocket.println(receiverNumber);
+                    if (MyContacts.get(0).contains("error")) {
+                        hasError = true;
+                        System.out.println("response from server ( " + MyContacts.get(0) + " )");
+                    } else {
+                        System.out.println("choose the id of the number you want to send a message to:");
+                        for (int i = 1; i <= contactNumber; i++) {
+                            System.out.println("(" + i + "): " + MyContacts.get(i - 1));
+                        }
+                        int id = Integer.parseInt(inputFromTerminal.nextLine());
+                        receiverNumber = MyContacts.get(id - 1);
+                        outputToSocket.println(receiverNumber);
+                    }
+                    break;
                 }
-                break;
+
             }
             default:
                 break;
@@ -244,9 +248,12 @@ public class ChatClient {
         System.out.println("reviewing messages");
         outputToSocket.println("showMessages");
         outputToSocket.println(myPhoneNumber);
-        int messagesNumber = Integer.parseInt(decryptFromServer());
-        for (int i = 0; i < messagesNumber; i++) {
-            System.out.println(decryptFromServer());
+        String message = decryptFromServer();
+        if (Symmetric.verifyPlainText(message)) {
+            int messagesNumber = Integer.parseInt(message);
+            for (int i = 0; i < messagesNumber; i++) {
+                System.out.println(decryptFromServer());
+            }
         }
     }
 
@@ -299,19 +306,22 @@ public class ChatClient {
         if (encryptedMessage != null) {
             outputToSocket.println(encryptedMessage);
             outputToSocket.println(Base64.getEncoder().encodeToString(iv));
+            outputToSocket.println(Symmetric.generateMac(encryptedMessage, keys.get(myPhoneNumber)));
         }
     }
 
     private String decryptFromServer() {
         String messageReceived = inputFromSocket.nextLine();
         String iv = inputFromSocket.nextLine();
-        return Symmetric.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
+        String mac = inputFromSocket.nextLine();
+        return Symmetric.decrypt(messageReceived, keys.get(myPhoneNumber), iv, mac);
     }
 
     private String decryptFromServer(Scanner inputFromOtherSocket) {
         String messageReceived = inputFromOtherSocket.nextLine();
         String iv = inputFromOtherSocket.nextLine();
-        return Symmetric.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
+        String mac = inputFromOtherSocket.nextLine();
+        return Symmetric.decrypt(messageReceived, keys.get(myPhoneNumber), iv, mac);
     }
 
     public static void main(String[] args) {
