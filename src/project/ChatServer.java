@@ -47,7 +47,9 @@ public class ChatServer implements Runnable {
     public void run() {
         System.out.println("Connected: " + socket);
         try {
-            handleServerHandshake();
+            this.inputFromSocket = new Scanner(socket.getInputStream());//input from client
+            this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
+            handleHandshake();
             while (inputFromSocket.hasNextLine()) {
                 String clientRequestChoice = inputFromSocket.nextLine();
                 switch (clientRequestChoice) {
@@ -133,19 +135,6 @@ public class ChatServer implements Runnable {
         }
     }
 
-    private void handleServerHandshake() throws SecurityException {
-        String request = inputFromSocket.nextLine();
-
-        if (Objects.equals(request, REQUEST_PUBLIC_KEY_MESSAGE)) {
-            System.out.println("Handshake Started :), Sending public key...");
-            outputToSocket.println(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
-            sessionKey = RSAEncryption.decrypt(inputFromSocket.nextLine(), privateKey);
-            System.out.println(sessionKey);
-        } else {
-            throw new SecurityException(HANDSHAKE_ERROR_MESSAGE);
-        }
-    }
-
     private void handleUserMessageSending() {
         String clientPhoneNumber = inputFromSocket.nextLine();
         String contactChoice = inputFromSocket.nextLine();
@@ -158,7 +147,7 @@ public class ChatServer implements Runnable {
                 if (successOrErrorMessage.contains("error")) {
                     hasError = true;
                 }
-                encryptToClient(successOrErrorMessage, clientPhoneNumber);
+                encryptToClient(successOrErrorMessage);
                 break;
             }
             case "oldContact": {
@@ -169,9 +158,9 @@ public class ChatServer implements Runnable {
                 for (String s : contacts) {
                     System.out.println(s);
                 }
-                encryptToClient(String.valueOf(contacts.size()), clientPhoneNumber);
+                encryptToClient(String.valueOf(contacts.size()));
                 for (String contact : contacts)
-                    encryptToClient(contact, clientPhoneNumber);
+                    encryptToClient(contact);
                 if (!hasError) receiverNumber = inputFromSocket.nextLine();
                 break;
             }
@@ -182,11 +171,11 @@ public class ChatServer implements Runnable {
         {
             StringBuilder message = new StringBuilder();
             String str = "";
-            while (!(str = decryptFromClient(clientPhoneNumber)).equals("#send")) {
+            while (!(str = decryptFromClient()).equals("#send")) {
                 if (AESEncryption.verifyPlainText(str)) {
                     message.append(str);
                 } else {
-                    encryptToClient(str, clientPhoneNumber);
+                    encryptToClient(str);
                     return;
                 }
             }
@@ -197,10 +186,10 @@ public class ChatServer implements Runnable {
             // save the message into db
             String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber, message.toString());
             //output response to client
-            encryptToClient(successOrErrorMessage, clientPhoneNumber);
+            encryptToClient(successOrErrorMessage);
             // send the message for the other client
             try {
-                if (PortIdCollection.online(receiverNumber)) {
+                if (PortIdCollection.online(receiverNumber)) { // TODO get receiver phone number form DB
                     System.out.println("other socket: host and port " + InetAddress.getLocalHost() + getPortNum(receiverNumber));
                     Socket otherSocket = new Socket(InetAddress.getLocalHost(), getPortNum(receiverNumber));
                     PrintWriter outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
@@ -221,7 +210,7 @@ public class ChatServer implements Runnable {
         // get the messages of the client
         ArrayList<HashMap> result = DBConnector.getMessages(clientPhoneNumber);
         System.out.println("messages result = " + result);
-        encryptToClient(String.valueOf(result.size()), clientPhoneNumber);
+        encryptToClient(String.valueOf(result.size()));
         for (HashMap hashMap : result) {
             String message = "";
             if (clientPhoneNumber.equals(hashMap.get("sender_phone_number"))) {
@@ -233,12 +222,12 @@ public class ChatServer implements Runnable {
             } else {
                 message = "Saved Message:" + ", msg: " + hashMap.get("content") + ", at:" + hashMap.get("sent_at");
             }
-            encryptToClient(message, clientPhoneNumber);
+            encryptToClient(message);
         }
     }
 
-    private void encryptToClient(String message, String clientPhoneNumber, PrintWriter outputToOtherSocket) {
-        String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
+    private void encryptToClient(String message, String receiverPhoneNumber, PrintWriter outputToOtherSocket) {
+        String userSecretKey = DBConnector.getUserSecretKey(receiverPhoneNumber);
         if (!userSecretKey.contains("error")) {
             byte[] iv = AESEncryption.generateIV();
             String encryptedMessage = AESEncryption.encrypt(message, userSecretKey, iv);
@@ -253,31 +242,37 @@ public class ChatServer implements Runnable {
         System.out.println(DATABASE_KEY_ERROR);
     }
 
-    private void encryptToClient(String message, String clientPhoneNumber) {
-        String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
-        if (!userSecretKey.contains("error")) {
-            byte[] iv = AESEncryption.generateIV();
-            String encryptedMessage = AESEncryption.encrypt(message, userSecretKey, iv);
-            String mac = AESEncryption.generateMac(encryptedMessage, userSecretKey);
-            if (!Objects.equals(encryptedMessage, AES_ENCRYPTION_ERROR_MESSAGE)) {
-                outputToSocket.println(encryptedMessage);
-                outputToSocket.println(Base64.getEncoder().encodeToString(iv));
-                outputToSocket.println(mac);
-            }
-            return;
+    private void encryptToClient(String message) {
+        byte[] iv = AESEncryption.generateIV();
+        String encryptedMessage = AESEncryption.encrypt(message, sessionKey, iv);
+        String mac = AESEncryption.generateMac(encryptedMessage, sessionKey);
+        if (!Objects.equals(encryptedMessage, AES_ENCRYPTION_ERROR_MESSAGE)) {
+            outputToSocket.println(encryptedMessage);
+            outputToSocket.println(Base64.getEncoder().encodeToString(iv));
+            outputToSocket.println(mac);
         }
-        System.out.println(DATABASE_KEY_ERROR);
     }
 
+    private String decryptFromClient() {
+        String message = inputFromSocket.nextLine();
+        String iv = inputFromSocket.nextLine();
+        String mac = inputFromSocket.nextLine();
+        return AESEncryption.decrypt(message, sessionKey, iv, mac);
 
-    private String decryptFromClient(String clientPhoneNumber) {
-        String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
-        if (!userSecretKey.contains("error")) {
-            String message = inputFromSocket.nextLine();
-            String iv = inputFromSocket.nextLine();
-            String mac = inputFromSocket.nextLine();
-            return AESEncryption.decrypt(message, userSecretKey, iv, mac);
+    }
+
+    private void handleHandshake() throws SecurityException {
+        String request = inputFromSocket.nextLine();
+
+        if (Objects.equals(request, REQUEST_PUBLIC_KEY_MESSAGE)) {
+            System.out.println("Handshake Started :), Sending public key...");
+
+            outputToSocket.println(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
+            sessionKey = RSAEncryption.decrypt(inputFromSocket.nextLine(), privateKey);
+
+            encryptToClient(SESSION_KEY_ACCEPTED);
+        } else {
+            throw new SecurityException(HANDSHAKE_ERROR_MESSAGE);
         }
-        return DATABASE_KEY_ERROR;
     }
 }

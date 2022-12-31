@@ -60,7 +60,7 @@ public class DBConnector {
         try {
             assert connection != null : "connection error";
             assert (phoneNumber.length() <= 10 && phoneNumber.matches("\\d+")) : "invalid input";
-            assert (certainColumn.equals("password") || certainColumn.equals("phone_number")) : "invalid chosen column";
+            assert (certainColumn.equals("password") || certainColumn.equals("phone_number") || certainColumn.equals("secret_key")) : "invalid chosen column";
             PreparedStatement preparedStatement = connection.prepareStatement(findSQL);
             preparedStatement.setString(1, phoneNumber);
             ResultSet user = preparedStatement.executeQuery();
@@ -77,6 +77,28 @@ public class DBConnector {
             exception.printStackTrace();
             return "sql error : " + exception.getMessage();
         }
+    }
+
+    private static String updateUser(@NotNull String phoneNumber, @NotNull String certainColumn, @NotNull String value) {
+        Connection connection = connect();
+        String updateSQL = "UPDATE users SET ? = ? where phone_number = ?";
+
+        try {
+            assert connection != null : "connection error";
+            assert (phoneNumber.length() <= 10 && phoneNumber.matches("\\d+")) : "invalid input";
+            assert (certainColumn.equals("password") || certainColumn.equals("phone_number") || certainColumn.equals("secret_key")) : "invalid chosen column";
+            PreparedStatement preparedStatement = connection.prepareStatement(updateSQL);
+            preparedStatement.setString(1, certainColumn);
+            preparedStatement.setString(2, value);
+            preparedStatement.setString(3, phoneNumber);
+            System.out.println(preparedStatement);
+            int affectedRows = preparedStatement.executeUpdate();
+            assert affectedRows > 0 : "error while inserting";
+        } catch (SQLException | AssertionError exception) {
+            exception.printStackTrace();
+            return "sql error : " + exception.getMessage();
+        }
+        return "Updated successfully = " + phoneNumber + " " + value;
     }
 
     /************************************ Contact ***********************************/
@@ -177,6 +199,7 @@ public class DBConnector {
         return "message is sent from " + senderPhoneNumber + " to the user " + receiverNumber;
     }
 
+
     public static ArrayList<HashMap> getMessages(String clientPhoneNumber) {
         Connection connection = connect();
         String findSQL = "Select * from messages where sender_phone_number = ? OR receiver_phone_number =?";
@@ -230,6 +253,10 @@ public class DBConnector {
 
     public static String getUserSecretKey(String phoneNumber) {
         return findUser(phoneNumber, "secret_key");
+    }
+
+    public static String setUserSecretKey(String phoneNumber, String secretKey) {
+        return updateUser(phoneNumber, 'secret_key', secretKey);
     }
 
     public static String addingContact(String adderNumber, String addedNumber) {

@@ -17,20 +17,6 @@ import static project.utils.Constants.*;
 
 public class ChatClient {
 
-    /**
-     * We can use this map for getting user's secret key by [myPhoneNumber]
-     **/
-    private final Map<String, String> keys = new HashMap<>() {{
-        put("0933062132", "Sv3DSAebkWl1/52LqurnOCoJygpE3E3rda14OcjfQGk=");
-        put("0953954152", "QefDGTafpKCi/3WGg2TkAYRHFGSkhUiqOVE344jNsHM=");
-        put("0955222043", "P7lsK/e8rVi9xOtBU5Zvo5JX4ozeLK5M/6sT7mCAQkY=");
-        put("0955222044", "4n/1hyt6uMgQaJRqlooplo+uWhEAJWf5yyi2prTDW60=");
-        put("0992371147", "UDFxrAb9uZ2k8K49YigxXG85li1By+//+aL73gIqMD4=");
-        put("0992371148", "cVK0my61a3R+WVEH96ELehVJrpSuf+zb7E97jQpO9VA=");
-        put("0944815425", "9aM6rCwUZ5xtZjrRmXx0ZEpnnXK8JwybbABqam5AoCc=");
-    }};
-
-
     private String sessionKey;
 
     private Key serverPublicKey;
@@ -68,17 +54,7 @@ public class ChatClient {
             this.inputFromSocket = new Scanner(socket.getInputStream());//input from server
             this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to server
             ClientGetMessages clientGetMessages = new ClientGetMessages();
-            // request public key
-            outputToSocket.println(REQUEST_PUBLIC_KEY_MESSAGE);
-            // initialize public key
-            serverPublicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(inputFromSocket.nextLine())));
-            System.out.println(serverPublicKey);
-            // initialize session key
-            sessionKey = Base64.getEncoder().encodeToString(AESEncryption.generateAESKey().getEncoded());
-            System.out.println(sessionKey);
-            // sending encrypted session key to the server
-            outputToSocket.println(RSAEncryption.encrypt(sessionKey, serverPublicKey));
-
+            handleHandshake();
             clientRequests:
             do {
                 if (!this.isLoggedIn)//case the client is not logged in
@@ -320,14 +296,13 @@ public class ChatClient {
         this.myPhoneNumber = "";
     }
 
-
     private void encryptToServer(String message) {
         byte[] iv = AESEncryption.generateIV();
-        String encryptedMessage = AESEncryption.encrypt(message, keys.get(myPhoneNumber), iv);
+        String encryptedMessage = AESEncryption.encrypt(message, sessionKey, iv);
         if (encryptedMessage != null) {
             outputToSocket.println(encryptedMessage);
             outputToSocket.println(Base64.getEncoder().encodeToString(iv));
-            outputToSocket.println(AESEncryption.generateMac(encryptedMessage, keys.get(myPhoneNumber)));
+            outputToSocket.println(AESEncryption.generateMac(encryptedMessage, sessionKey));
         }
     }
 
@@ -335,14 +310,30 @@ public class ChatClient {
         String messageReceived = inputFromSocket.nextLine();
         String iv = inputFromSocket.nextLine();
         String mac = inputFromSocket.nextLine();
-        return AESEncryption.decrypt(messageReceived, keys.get(myPhoneNumber), iv, mac);
+        return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
     }
 
     private String decryptFromServer(Scanner inputFromOtherSocket) {
         String messageReceived = inputFromOtherSocket.nextLine();
         String iv = inputFromOtherSocket.nextLine();
         String mac = inputFromOtherSocket.nextLine();
-        return AESEncryption.decrypt(messageReceived, keys.get(myPhoneNumber), iv, mac);
+        return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+    }
+
+    private void handleHandshake() throws SecurityException {
+        try {
+            outputToSocket.println(REQUEST_PUBLIC_KEY_MESSAGE);
+
+            serverPublicKey = KeyFactory.getInstance(RSA).generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(inputFromSocket.nextLine())));
+
+            sessionKey = Base64.getEncoder().encodeToString(AESEncryption.generateAESKey().getEncoded());
+
+            outputToSocket.println(RSAEncryption.encrypt(sessionKey, serverPublicKey));
+
+            System.out.println(decryptFromServer());
+        } catch (Exception e) {
+            throw new SecurityException(HANDSHAKE_ERROR_MESSAGE);
+        }
     }
 
     public static void main(String[] args) {

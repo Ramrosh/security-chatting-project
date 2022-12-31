@@ -53,4 +53,6 @@ public class Constants {
     public static final String SERVER_PRIVATE_KEY_FILE = "private.key";
 
     public static final String REQUEST_PUBLIC_KEY_MESSAGE = "Can I have your public key?";
+
+    public static final String SESSION_KEY_ACCEPTED = "Session key is accepted";
 }
