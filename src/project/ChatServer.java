@@ -16,7 +16,6 @@ import static project.utils.ConsolePrintingColors.ANSI_BLUE;
 import static project.utils.ConsolePrintingColors.ANSI_RESET;
 
 public class ChatServer implements Runnable {
-    private static final String REQUEST_PUBLIC_KEY = "Can I have your public key?";
 
     private Scanner inputFromSocket;
     private PrintWriter outputToSocket;
@@ -24,6 +23,7 @@ public class ChatServer implements Runnable {
     private final Socket socket;
     private final Hasher hasher;
     private final Key publicKey;
+    private final Key privateKey;
     private String sessionKey;
 
 
@@ -31,6 +31,9 @@ public class ChatServer implements Runnable {
         this.socket = socket;
         hasher = new Hasher();
         publicKey = RSAEncryption.getPublicKey();
+        privateKey = RSAEncryption.getPrivateKey();
+        assert publicKey != null : INIT_SERVER_PUBLIC_ERROR_MESSAGE;
+        assert privateKey != null : INIT_SERVER_PRIVATE_ERROR_MESSAGE;
     }
 
     public int getPortNum(String receiverPhoneNumber) {
@@ -44,21 +47,7 @@ public class ChatServer implements Runnable {
     public void run() {
         System.out.println("Connected: " + socket);
         try {
-            this.inputFromSocket = new Scanner(socket.getInputStream());//input from client
-            this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
-            String request = inputFromSocket.nextLine();
-            if (Objects.equals(request, REQUEST_PUBLIC_KEY)) {
-                System.out.println("Handshake Started :)");
-                System.out.println("Sending public key...");
-                outputToSocket.println(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
-                sessionKey = RSAEncryption.decrypt(inputFromSocket.nextLine());
-                System.out.println(sessionKey);
-                // TODO: send response telling user the session key is accepted
-            } else {
-                System.out.println("Handshake failed :(");
-                return;
-            }
-
+            handleServerHandshake();
             while (inputFromSocket.hasNextLine()) {
                 String clientRequestChoice = inputFromSocket.nextLine();
                 switch (clientRequestChoice) {
@@ -141,6 +130,19 @@ public class ChatServer implements Runnable {
         if (!successOrErrorMessage.contains("error")) {
             PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
             System.out.println(PortIdCollection.portIDPairs);
+        }
+    }
+
+    private void handleServerHandshake() throws SecurityException {
+        String request = inputFromSocket.nextLine();
+
+        if (Objects.equals(request, REQUEST_PUBLIC_KEY_MESSAGE)) {
+            System.out.println("Handshake Started :), Sending public key...");
+            outputToSocket.println(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
+            sessionKey = RSAEncryption.decrypt(inputFromSocket.nextLine(), privateKey);
+            System.out.println(sessionKey);
+        } else {
+            throw new SecurityException(HANDSHAKE_ERROR_MESSAGE);
         }
     }
 
@@ -241,7 +243,7 @@ public class ChatServer implements Runnable {
             byte[] iv = AESEncryption.generateIV();
             String encryptedMessage = AESEncryption.encrypt(message, userSecretKey, iv);
             String mac = AESEncryption.generateMac(encryptedMessage, userSecretKey);
-            if (!Objects.equals(encryptedMessage, ENCRYPTION_ERROR_MESSAGE)) {
+            if (!Objects.equals(encryptedMessage, AES_ENCRYPTION_ERROR_MESSAGE)) {
                 outputToOtherSocket.println(encryptedMessage);
                 outputToOtherSocket.println(Base64.getEncoder().encodeToString(iv));
                 outputToOtherSocket.println(mac);
@@ -257,7 +259,7 @@ public class ChatServer implements Runnable {
             byte[] iv = AESEncryption.generateIV();
             String encryptedMessage = AESEncryption.encrypt(message, userSecretKey, iv);
             String mac = AESEncryption.generateMac(encryptedMessage, userSecretKey);
-            if (!Objects.equals(encryptedMessage, ENCRYPTION_ERROR_MESSAGE)) {
+            if (!Objects.equals(encryptedMessage, AES_ENCRYPTION_ERROR_MESSAGE)) {
                 outputToSocket.println(encryptedMessage);
                 outputToSocket.println(Base64.getEncoder().encodeToString(iv));
                 outputToSocket.println(mac);

@@ -103,7 +103,7 @@ public class AESEncryption {
             return Base64.getEncoder().encodeToString(cipherText);
         } catch (Exception e) {
             e.printStackTrace();
-            return ENCRYPTION_ERROR_MESSAGE;
+            return AES_ENCRYPTION_ERROR_MESSAGE;
         }
     }
 
@@ -130,8 +130,8 @@ public class AESEncryption {
                 return new String(result);
             } catch (Exception e) {
                 e.printStackTrace();
-                System.out.println(DECRYPTION_ERROR_MESSAGE);
-                return DECRYPTION_ERROR_MESSAGE;
+                System.out.println(AES_DECRYPTION_ERROR_MESSAGE);
+                return AES_DECRYPTION_ERROR_MESSAGE;
             }
         } else {
             System.out.println(AUTHENTICATION_ERROR_MESSAGE);
@@ -144,6 +144,6 @@ public class AESEncryption {
      *  return true of not equal
      **/
     public static boolean verifyPlainText(String plainText) {
-        return !(Objects.equals(plainText, AUTHENTICATION_ERROR_MESSAGE) || Objects.equals(plainText, DATABASE_KEY_ERROR) || Objects.equals(plainText, DECRYPTION_ERROR_MESSAGE));
+        return !(Objects.equals(plainText, AUTHENTICATION_ERROR_MESSAGE) || Objects.equals(plainText, DATABASE_KEY_ERROR) || Objects.equals(plainText, AES_DECRYPTION_ERROR_MESSAGE));
     }
 }

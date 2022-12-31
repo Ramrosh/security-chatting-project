@@ -8,20 +8,9 @@ import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Base64;
 
+import static project.utils.Constants.*;
+
 public class RSAEncryption {
-    static private Key publicKey;
-
-    static private Key privateKey;
-
-    static private final int KeySize = 4096;
-
-    static private final String RSA = "RSA";
-
-    static private final String PublicKeyFile = "public.key";
-
-    static private final String PrivateKeyFile = "private.key";
-
-    static private final String RSA_CIPHER_ALGORITHM = "RSA/ECB/OAEPWITHSHA-512ANDMGF1PADDING";
 
     /**
      * Initialize public and private keys from the files
@@ -29,27 +18,26 @@ public class RSAEncryption {
      **/
     public static void init() {
         try {
-            publicKey = readKeyFromFile(PublicKeyFile);
-            privateKey = readKeyFromFile(PrivateKeyFile);
+            readKeyFromFile(SERVER_PUBLIC_KEY_FILE);
+            readKeyFromFile(SERVER_PRIVATE_KEY_FILE);
         } catch (IOException ioException) {
             System.out.println("Cannot read from the file" + ioException.getMessage());
             System.out.println("Generating a new instance...");
             try {
-                // Get an instance of the RSA key generator
                 KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(RSA);
-                keyPairGenerator.initialize(KeySize);
-                // Generate the KeyPair
+                keyPairGenerator.initialize(RSA_KEY_SIZE);
+
                 KeyPair keyPair = keyPairGenerator.generateKeyPair();
-                // Get the public and private key
-                publicKey = keyPair.getPublic();
-                privateKey = keyPair.getPrivate();
-                // Get the RSAPublicKeySpec and RSAPrivateKeySpec
+
+                Key publicKey = keyPair.getPublic();
+                Key privateKey = keyPair.getPrivate();
+
                 KeyFactory keyFactory = KeyFactory.getInstance(RSA);
                 RSAPublicKeySpec publicKeySpec = keyFactory.getKeySpec(publicKey, RSAPublicKeySpec.class);
                 RSAPrivateKeySpec privateKeySpec = keyFactory.getKeySpec(privateKey, RSAPrivateKeySpec.class);
-                // Saving the Key to the file
-                saveKeyToFile(PublicKeyFile, publicKeySpec.getModulus(), publicKeySpec.getPublicExponent());
-                saveKeyToFile(PrivateKeyFile, privateKeySpec.getModulus(), privateKeySpec.getPrivateExponent());
+
+                saveKeyToFile(SERVER_PUBLIC_KEY_FILE, publicKeySpec.getModulus(), publicKeySpec.getPublicExponent());
+                saveKeyToFile(SERVER_PRIVATE_KEY_FILE, privateKeySpec.getModulus(), privateKeySpec.getPrivateExponent());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -90,60 +78,58 @@ public class RSAEncryption {
     }
 
     /**
-     * This function takes plaintext, and return the CipherText.
-     * Important! do not use this function before initialize the RSA
-     **/
-    public static String encrypt(String plainText) throws Exception {
-        Key publicKey = readKeyFromFile(PublicKeyFile);
-        // Get Cipher Instance
-        Cipher cipher = Cipher.getInstance(RSA_CIPHER_ALGORITHM);
-        // Initialize Cipher for ENCRYPT_MODE
-        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-        // Perform Encryption
-        byte[] cipherText = cipher.doFinal(plainText.getBytes());
-
-        return Base64.getEncoder().encodeToString(cipherText);
-    }
-
-    /**
      * This function takes plaintext and the publicKey, and return the CipherText.
      **/
-    public static String encrypt(String plainText, Key publicKey) throws Exception {
-        // Get Cipher Instance
-        Cipher cipher = Cipher.getInstance(RSA_CIPHER_ALGORITHM);
-        // Initialize Cipher for ENCRYPT_MODE
-        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-        // Perform Encryption
-        byte[] cipherText = cipher.doFinal(plainText.getBytes());
+    public static String encrypt(String plainText, Key publicKey) {
+        try {
+            Cipher cipher = Cipher.getInstance(RSA_CIPHER_ALGORITHM);
 
-        return Base64.getEncoder().encodeToString(cipherText);
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+
+            byte[] cipherText = cipher.doFinal(plainText.getBytes());
+
+            return Base64.getEncoder().encodeToString(cipherText);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return RSA_ENCRYPTION_ERROR_MESSAGE;
+        }
     }
 
 
     /**
      * This function takes CipherText, and return the plainText.
-     * Important! do not use this function before initialize the RSA
      **/
-    public static String decrypt(String cipherText) throws Exception {
-        Key privateKey = readKeyFromFile(PrivateKeyFile);
+    public static String decrypt(String cipherText, Key privateKey) {
+        try {
 
-        byte[] cipherTextArray = Base64.getDecoder().decode(cipherText);
+            byte[] cipherTextArray = Base64.getDecoder().decode(cipherText);
 
-        // Get Cipher Instance
-        Cipher cipher = Cipher.getInstance(RSA_CIPHER_ALGORITHM);
+            Cipher cipher = Cipher.getInstance(RSA_CIPHER_ALGORITHM);
 
-        // Initialize Cipher for DECRYPT_MODE
-        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
 
-        // Perform Decryption
-        byte[] decryptedTextArray = cipher.doFinal(cipherTextArray);
+            byte[] decryptedTextArray = cipher.doFinal(cipherTextArray);
 
-        return new String(decryptedTextArray);
+            return new String(decryptedTextArray);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return AES_DECRYPTION_ERROR_MESSAGE;
+        }
     }
 
     public static Key getPublicKey() {
         try {
-            return readKeyFromFile(PublicKeyFile);
+            return readKeyFromFile(SERVER_PUBLIC_KEY_FILE);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+
+    public static Key getPrivateKey() {
+        try {
+            return readKeyFromFile(SERVER_PRIVATE_KEY_FILE);
         } catch (IOException e) {
             e.printStackTrace();
             return null;

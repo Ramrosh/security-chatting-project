@@ -3,18 +3,17 @@ package project;
 import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
-import javax.crypto.SecretKey;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.Key;
 import java.security.KeyFactory;
-import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 
 import static project.utils.ConsolePrintingColors.*;
+import static project.utils.Constants.*;
 
 public class ChatClient {
 
@@ -31,7 +30,6 @@ public class ChatClient {
         put("0944815425", "9aM6rCwUZ5xtZjrRmXx0ZEpnnXK8JwybbABqam5AoCc=");
     }};
 
-    private static final String REQUEST_PUBLIC_KEY = "Can I have your public key?";
 
     private String sessionKey;
 
@@ -71,7 +69,7 @@ public class ChatClient {
             this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to server
             ClientGetMessages clientGetMessages = new ClientGetMessages();
             // request public key
-            outputToSocket.println(REQUEST_PUBLIC_KEY);
+            outputToSocket.println(REQUEST_PUBLIC_KEY_MESSAGE);
             // initialize public key
             serverPublicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(inputFromSocket.nextLine())));
             System.out.println(serverPublicKey);
