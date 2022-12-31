@@ -113,7 +113,7 @@ public class RSAEncryption {
             return new String(decryptedTextArray);
         } catch (Exception e) {
             e.printStackTrace();
-            return AES_DECRYPTION_ERROR_MESSAGE;
+            return RSA_DECRYPTION_ERROR_MESSAGE;
         }
     }
 
