@@ -11,6 +11,7 @@ import java.net.Socket;
 import java.security.Key;
 import java.util.*;
 
+import static project.utils.Constants.*;
 import static project.utils.ConsolePrintingColors.ANSI_BLUE;
 import static project.utils.ConsolePrintingColors.ANSI_RESET;
 
@@ -234,11 +235,15 @@ public class ChatServer implements Runnable {
         if (!userSecretKey.contains("error")) {
             byte[] iv = AESEncryption.generateIV();
             String encryptedMessage = AESEncryption.encrypt(message, userSecretKey, iv);
-            if (encryptedMessage != null) {
+            String mac = AESEncryption.generateMac(encryptedMessage, userSecretKey);
+            if (!Objects.equals(encryptedMessage, ENCRYPTION_ERROR_MESSAGE)) {
                 outputToOtherSocket.println(encryptedMessage);
                 outputToOtherSocket.println(Base64.getEncoder().encodeToString(iv));
+                outputToOtherSocket.println(mac);
             }
+            return;
         }
+        System.out.println(DATABASE_KEY_ERROR);
     }
 
     private void encryptToClient(String message, String clientPhoneNumber) {
@@ -246,21 +251,26 @@ public class ChatServer implements Runnable {
         if (!userSecretKey.contains("error")) {
             byte[] iv = AESEncryption.generateIV();
             String encryptedMessage = AESEncryption.encrypt(message, userSecretKey, iv);
-            if (encryptedMessage != null) {
+            String mac = AESEncryption.generateMac(encryptedMessage, userSecretKey);
+            if (!Objects.equals(encryptedMessage, ENCRYPTION_ERROR_MESSAGE)) {
                 outputToSocket.println(encryptedMessage);
                 outputToSocket.println(Base64.getEncoder().encodeToString(iv));
+                outputToSocket.println(mac);
             }
+            return;
         }
+        System.out.println(DATABASE_KEY_ERROR);
     }
 
 
     private String decryptFromClient(String clientPhoneNumber) {
         String userSecretKey = DBConnector.getUserSecretKey(clientPhoneNumber);
         if (!userSecretKey.contains("error")) {
-            String messageReceived = inputFromSocket.nextLine();
+            String message = inputFromSocket.nextLine();
             String iv = inputFromSocket.nextLine();
-            return AESEncryption.decrypt(messageReceived, userSecretKey, iv);
+            String mac = inputFromSocket.nextLine();
+            return AESEncryption.decrypt(message, userSecretKey, iv, mac);
         }
-        return null;
+        return DATABASE_KEY_ERROR;
     }
 }

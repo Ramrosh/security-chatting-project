@@ -316,25 +316,29 @@ public class ChatClient {
         this.myPhoneNumber = "";
     }
 
+
     private void encryptToServer(String message) {
         byte[] iv = AESEncryption.generateIV();
         String encryptedMessage = AESEncryption.encrypt(message, keys.get(myPhoneNumber), iv);
         if (encryptedMessage != null) {
             outputToSocket.println(encryptedMessage);
             outputToSocket.println(Base64.getEncoder().encodeToString(iv));
+            outputToSocket.println(AESEncryption.generateMac(encryptedMessage, keys.get(myPhoneNumber)));
         }
     }
 
     private String decryptFromServer() {
         String messageReceived = inputFromSocket.nextLine();
         String iv = inputFromSocket.nextLine();
-        return AESEncryption.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
+        String mac = inputFromSocket.nextLine();
+        return AESEncryption.decrypt(messageReceived, keys.get(myPhoneNumber), iv, mac);
     }
 
     private String decryptFromServer(Scanner inputFromOtherSocket) {
         String messageReceived = inputFromOtherSocket.nextLine();
         String iv = inputFromOtherSocket.nextLine();
-        return AESEncryption.decrypt(messageReceived, keys.get(myPhoneNumber), iv);
+        String mac = inputFromOtherSocket.nextLine();
+        return AESEncryption.decrypt(messageReceived, keys.get(myPhoneNumber), iv, mac);
     }
 
     public static void main(String[] args) {
