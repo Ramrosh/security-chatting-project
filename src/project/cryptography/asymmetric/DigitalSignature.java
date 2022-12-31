@@ -19,6 +19,7 @@ public class DigitalSignature {
             signature.update(Base64.getDecoder().decode(input));
             return Base64.getEncoder().encodeToString(signature.sign());
         } catch (Exception e) {
+            e.printStackTrace();
             return CREATE_DIGITAL_SIGNATURE_ERROR_MESSAGE;
         }
     }

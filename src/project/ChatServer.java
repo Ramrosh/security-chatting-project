@@ -1,6 +1,7 @@
 package project;
 
 
+import project.ca.Certificate;
 import project.cryptography.asymmetric.DigitalSignature;
 import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
@@ -25,10 +26,12 @@ public class ChatServer implements Runnable {
 
     private final Socket socket;
     private final Hasher hasher;
+    private static final PublicKey CAPublicKey = (PublicKey) RSAEncryption.getPublicKey(CA_PUBLIC_KEY_FILE);
     private final PublicKey publicKey;
     private final PrivateKey privateKey;
     private String sessionKey;
     private PublicKey userPublicKey;
+    private Certificate certificate;
 
 
     ChatServer(Socket socket) {
@@ -36,6 +39,11 @@ public class ChatServer implements Runnable {
         hasher = new Hasher();
         publicKey = (PublicKey) RSAEncryption.getPublicKey(SERVER_PUBLIC_KEY_FILE);
         privateKey = (PrivateKey) RSAEncryption.getPrivateKey(SERVER_PRIVATE_KEY_FILE);
+        try {
+            certificate=Certificate.retrieveFromFile(SERVER_CERTIFICATE_FILE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         assert publicKey != null : INIT_SERVER_PUBLIC_ERROR_MESSAGE;
         assert privateKey != null : INIT_SERVER_PRIVATE_ERROR_MESSAGE;
     }
@@ -53,6 +61,13 @@ public class ChatServer implements Runnable {
         try {
             this.inputFromSocket = new Scanner(socket.getInputStream());//input from client
             this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
+            //FIXME::the problem lies in these two commented lines
+//            if(inputFromSocket.hasNext()&&inputFromSocket.nextLine().equals("verifySubject"))//handle the code verification request from CA
+//            {
+//                 this.handleSubjectVerification();
+//                 return;
+//            }
+//            else
             handleHandshake();
             while (inputFromSocket.hasNextLine()) {
                 String clientRequestChoice = inputFromSocket.nextLine();
@@ -99,6 +114,12 @@ public class ChatServer implements Runnable {
         }
     }
 
+    private void handleSubjectVerification(){
+        String receivedCode=inputFromSocket.nextLine();
+        System.out.println("enter the code : "+receivedCode);
+        String inputCode=new Scanner(System.in).nextLine();
+        outputToSocket.println(inputCode);
+    }
     //handling inputs and outputs of requests&responses methods
     private void handleUserLogin() {
         //get phone number and password from client

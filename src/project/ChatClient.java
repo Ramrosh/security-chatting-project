@@ -8,7 +8,6 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.Key;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -20,6 +19,7 @@ import static project.utils.Constants.*;
 
 public class ChatClient {
 
+    private static final PublicKey CAPublicKey = (PublicKey) RSAEncryption.getPublicKey(CA_PUBLIC_KEY_FILE);
     private String sessionKey;
 
     //attributes

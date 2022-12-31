@@ -63,9 +63,21 @@ public class Constants {
 
     public static String KEY_FOLDER_PATH = PROJECT_FOLDER_PATH + "/src/project/keys/";
 
+    public static String CERTIFICATE_FOLDER_PATH = PROJECT_FOLDER_PATH + "/src/project/certificates/";
+
     public static String REQUEST_PUBLIC_KEY_MESSAGE = "Can I have your public key?";
 
+    public static final String CLIENT_CSR_MESSAGE = "client csr";
+
+    public static final String SERVER_CSR_MESSAGE = "server csr";
+
     public static String SESSION_KEY_ACCEPTED = "Session key is accepted";
+
+    public static String CA_PUBLIC_KEY_FILE = "ca_public.key";
+
+    public static String CA_PRIVATE_KEY_FILE = "ca_private.key";
+
+    public static String SERVER_CERTIFICATE_FILE = "certificate.cer";
 
     public static String USER_PUBLIC_KEY_PATH(String phoneNumber) {
         return phoneNumber + "_public.key";
@@ -73,5 +85,9 @@ public class Constants {
 
     public static String USER_PRIVATE_KEY_PATH(String phoneNumber) {
         return phoneNumber + "_private.key";
+    }
+
+    public static String CLIENT_CERTIFICATE_PATH(String phoneNumber) {
+        return phoneNumber + "_certificate.cer";
     }
 }
