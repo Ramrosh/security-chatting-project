@@ -256,7 +256,7 @@ public class DBConnector {
     }
 
     public static String setUserSecretKey(String phoneNumber, String secretKey) {
-        return updateUser(phoneNumber, 'secret_key', secretKey);
+        return updateUser(phoneNumber, "secret_key", secretKey);
     }
 
     public static String addingContact(String adderNumber, String addedNumber) {
