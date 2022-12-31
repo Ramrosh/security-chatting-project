@@ -141,9 +141,9 @@ public class AESEncryption {
 
     /**
      * This function takes the plain text (after verifying the mac) and makes sure to not equal any of our consistent error
-     *  return true of not equal
+     * return true of not equal
      **/
     public static boolean verifyPlainText(String plainText) {
-        return !(Objects.equals(plainText, AUTHENTICATION_ERROR_MESSAGE) || Objects.equals(plainText, DATABASE_KEY_ERROR) || Objects.equals(plainText, AES_DECRYPTION_ERROR_MESSAGE));
+        return !(Objects.equals(plainText, AUTHENTICATION_ERROR_MESSAGE) || Objects.equals(plainText, DATABASE_KEY_ERROR) || Objects.equals(plainText, AES_DECRYPTION_ERROR_MESSAGE) || Objects.equals(plainText, VERIFY_DIGITAL_SIGNATURE_ERROR_MESSAGE));
     }
 }
