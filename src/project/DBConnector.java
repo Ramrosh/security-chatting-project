@@ -179,9 +179,9 @@ public class DBConnector {
     }
 
     /************************************ Message ***********************************/
-    private static String addMessage(String senderPhoneNumber, String receiverNumber, String message) {
+    private static String addMessage(String senderPhoneNumber, String receiverNumber, String message, String signature) {
         Connection connection = connect();
-        String insertSQL = "INSERT INTO messages (content, sender_phone_number, receiver_phone_number) VALUES (?, ?, ?)";
+        String insertSQL = "INSERT INTO messages (content, sender_phone_number, receiver_phone_number,signature) VALUES (?, ?, ?,?)";
         try {
             assert connection != null : "connection error";
             assert ((senderPhoneNumber.length() <= 10) && (receiverNumber.length() <= 10) &&
@@ -190,6 +190,7 @@ public class DBConnector {
             preparedStatement.setString(1, message);
             preparedStatement.setString(2, senderPhoneNumber);
             preparedStatement.setString(3, receiverNumber);
+            preparedStatement.setString(4, signature);
             int affectedRows = preparedStatement.executeUpdate();
             assert affectedRows > 0 : "error while inserting";
         } catch (SQLException | AssertionError exception) {
@@ -216,6 +217,7 @@ public class DBConnector {
                 row.put("sender_phone_number", messages.getString("sender_phone_number"));
                 row.put("receiver_phone_number", messages.getString("receiver_phone_number"));
                 row.put("content", messages.getString("content"));
+                row.put("signature", messages.getString("signature"));
                 row.put("sent_at", messages.getObject("sent_at"));
                 messagesResultList.add(row);
             }
@@ -259,6 +261,10 @@ public class DBConnector {
         return updateUser(phoneNumber, "secret_key", secretKey);
     }
 
+    public static String setUserPublicKey(String phoneNumber, String publicKey) {
+        return updateUser(phoneNumber, "public_key", publicKey);
+    }
+
     public static String addingContact(String adderNumber, String addedNumber) {
         String findUserResult = findUser(addedNumber, "");
         String findContactResult = findContact(adderNumber, addedNumber);
@@ -276,7 +282,7 @@ public class DBConnector {
         }
     }
 
-    public static String sendMessage(String senderPhoneNumber, String receiverNumber, String message) {
-        return addMessage(senderPhoneNumber, receiverNumber, message);
+    public static String sendMessage(String senderPhoneNumber, String receiverNumber, String message, String signature) {
+        return addMessage(senderPhoneNumber, receiverNumber, message, signature);
     }
 }

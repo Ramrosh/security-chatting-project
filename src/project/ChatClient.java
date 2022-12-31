@@ -1,5 +1,6 @@
 package project;
 
+import project.cryptography.asymmetric.DigitalSignature;
 import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
@@ -9,6 +10,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.Key;
 import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 
@@ -19,16 +22,17 @@ public class ChatClient {
 
     private String sessionKey;
 
-    private Key serverPublicKey;
-
     //attributes
     boolean isLoggedIn;
 
-    private String myPhoneNumber;
+    private static String myPhoneNumber;
     //input&output streams
     private Scanner inputFromSocket;
     private PrintWriter outputToSocket;
     private Scanner inputFromTerminal;
+    private PublicKey publicKey;
+    private PrivateKey privateKey;
+    private PublicKey serverPublicKey;
 
     //constructors
     public ChatClient() {
@@ -146,7 +150,7 @@ public class ChatClient {
         if (!response.contains("error")) {
             this.isLoggedIn = true;
             this.myPhoneNumber = phoneNumber;
-            RSAEncryption.init(USER_PUBLIC_KEY_PATH(myPhoneNumber),USER_PRIVATE_KEY_PATH(myPhoneNumber));
+            initializeKeys();
             System.out.println(ANSI_GREEN + "I am logged in now :) " + ANSI_RESET);
         }
     }
@@ -169,7 +173,7 @@ public class ChatClient {
         if (!response.contains("error")) {
             this.isLoggedIn = true;
             this.myPhoneNumber = phoneNumber;
-            RSAEncryption.init(USER_PUBLIC_KEY_PATH(myPhoneNumber),USER_PRIVATE_KEY_PATH(myPhoneNumber));
+            initializeKeys();
             System.out.println(ANSI_GREEN + "I am logged in now :) " + ANSI_RESET);
         }
     }
@@ -295,7 +299,7 @@ public class ChatClient {
     private void resetClientState() {
         outputToSocket.println(myPhoneNumber);
         this.isLoggedIn = false;
-        this.myPhoneNumber = "";
+        myPhoneNumber = "";
     }
 
     private void encryptToServer(String message) {
@@ -305,6 +309,7 @@ public class ChatClient {
             outputToSocket.println(encryptedMessage);
             outputToSocket.println(Base64.getEncoder().encodeToString(iv));
             outputToSocket.println(AESEncryption.generateMac(encryptedMessage, sessionKey));
+            outputToSocket.println(DigitalSignature.createDigitalSignature(encryptedMessage, privateKey));
         }
     }
 
@@ -312,14 +317,24 @@ public class ChatClient {
         String messageReceived = inputFromSocket.nextLine();
         String iv = inputFromSocket.nextLine();
         String mac = inputFromSocket.nextLine();
-        return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+        String signature = inputFromSocket.nextLine();
+        if (DigitalSignature.verifyDigitalSignature(messageReceived, signature, serverPublicKey)) {
+            return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+        } else {
+            return VERIFY_DIGITAL_SIGNATURE_ERROR_MESSAGE;
+        }
     }
 
     private String decryptFromServer(Scanner inputFromOtherSocket) {
         String messageReceived = inputFromOtherSocket.nextLine();
         String iv = inputFromOtherSocket.nextLine();
         String mac = inputFromOtherSocket.nextLine();
-        return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+        String signature = inputFromOtherSocket.nextLine();
+        if (DigitalSignature.verifyDigitalSignature(messageReceived, signature, serverPublicKey)) {
+            return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+        } else {
+            return VERIFY_DIGITAL_SIGNATURE_ERROR_MESSAGE;
+        }
     }
 
     private void handleHandshake() throws SecurityException {
@@ -336,6 +351,13 @@ public class ChatClient {
         } catch (Exception e) {
             throw new SecurityException(HANDSHAKE_ERROR_MESSAGE);
         }
+    }
+
+    private void initializeKeys() {
+        RSAEncryption.init(USER_PUBLIC_KEY_PATH(myPhoneNumber), USER_PRIVATE_KEY_PATH(myPhoneNumber));
+        publicKey = (PublicKey) RSAEncryption.getPublicKey(USER_PUBLIC_KEY_PATH(myPhoneNumber));
+        privateKey = (PrivateKey) RSAEncryption.getPublicKey(USER_PRIVATE_KEY_PATH(myPhoneNumber));
+        encryptToServer(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
     }
 
     public static void main(String[] args) {

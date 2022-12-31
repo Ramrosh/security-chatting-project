@@ -21,8 +21,8 @@ public class RSAEncryption {
             readKeyFromFile(publicKeyPath);
             readKeyFromFile(privateKeyPath);
         } catch (IOException ioException) {
-            System.out.println("Cannot read from the file" + ioException.getMessage());
-            System.out.println("Generating a new instance...");
+            System.out.println("Cannot read from the file " + ioException.getMessage());
+            System.out.println("Don't worry :) Generating a new instance!...");
             try {
                 KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(RSA);
                 keyPairGenerator.initialize(RSA_KEY_SIZE);
@@ -67,9 +67,11 @@ public class RSAEncryption {
             BigInteger modulus = (BigInteger) objectInputStream.readObject();
             BigInteger exponent = (BigInteger) objectInputStream.readObject();
             KeyFactory keyFactory = KeyFactory.getInstance(RSA);
-            if (keyFileName.startsWith("public"))
+            if (keyFileName.contains("public")) {
                 key = keyFactory.generatePublic(new RSAPublicKeySpec(modulus, exponent));
-            else key = keyFactory.generatePrivate(new RSAPrivateKeySpec(modulus, exponent));
+            } else {
+                key = keyFactory.generatePrivate(new RSAPrivateKeySpec(modulus, exponent));
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -101,7 +103,6 @@ public class RSAEncryption {
      **/
     public static String decrypt(String cipherText, Key privateKey) {
         try {
-
             byte[] cipherTextArray = Base64.getDecoder().decode(cipherText);
 
             Cipher cipher = Cipher.getInstance(RSA_CIPHER_ALGORITHM);
@@ -113,13 +114,13 @@ public class RSAEncryption {
             return new String(decryptedTextArray);
         } catch (Exception e) {
             e.printStackTrace();
-            return AES_DECRYPTION_ERROR_MESSAGE;
+            return RSA_DECRYPTION_ERROR_MESSAGE;
         }
     }
 
-    public static Key getPublicKey() {
+    public static Key getPublicKey(String fileName) {
         try {
-            return readKeyFromFile(SERVER_PUBLIC_KEY_FILE);
+            return readKeyFromFile(fileName);
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -127,9 +128,9 @@ public class RSAEncryption {
     }
 
 
-    public static Key getPrivateKey() {
+    public static Key getPrivateKey(String fileName) {
         try {
-            return readKeyFromFile(SERVER_PRIVATE_KEY_FILE);
+            return readKeyFromFile(fileName);
         } catch (IOException e) {
             e.printStackTrace();
             return null;

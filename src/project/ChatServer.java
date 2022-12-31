@@ -1,6 +1,7 @@
 package project;
 
 
+import project.cryptography.asymmetric.DigitalSignature;
 import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
@@ -8,7 +9,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.security.Key;
+import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 
 import static project.utils.Constants.*;
@@ -22,16 +25,17 @@ public class ChatServer implements Runnable {
 
     private final Socket socket;
     private final Hasher hasher;
-    private final Key publicKey;
-    private final Key privateKey;
+    private final PublicKey publicKey;
+    private final PrivateKey privateKey;
     private String sessionKey;
+    private PublicKey userPublicKey;
 
 
     ChatServer(Socket socket) {
         this.socket = socket;
         hasher = new Hasher();
-        publicKey = RSAEncryption.getPublicKey();
-        privateKey = RSAEncryption.getPrivateKey();
+        publicKey = (PublicKey) RSAEncryption.getPublicKey(SERVER_PUBLIC_KEY_FILE);
+        privateKey = (PrivateKey) RSAEncryption.getPrivateKey(SERVER_PRIVATE_KEY_FILE);
         assert publicKey != null : INIT_SERVER_PUBLIC_ERROR_MESSAGE;
         assert privateKey != null : INIT_SERVER_PRIVATE_ERROR_MESSAGE;
     }
@@ -115,6 +119,7 @@ public class ChatServer implements Runnable {
         if (validPassword) {
             PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
             System.out.println(PortIdCollection.portIDPairs);
+            initializeUserPublicKey();
         }
     }
 
@@ -132,6 +137,7 @@ public class ChatServer implements Runnable {
         if (!successOrErrorMessage.contains("error")) {
             PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
             System.out.println(PortIdCollection.portIDPairs);
+            initializeUserPublicKey();
         }
     }
 
@@ -170,8 +176,9 @@ public class ChatServer implements Runnable {
         if (!hasError)//if no error was received by db send the message
         {
             StringBuilder message = new StringBuilder();
+            StringBuilder signature = new StringBuilder();
             String str = "";
-            while (!(str = decryptFromClient()).equals("#send")) {
+            while (!(str = decryptFromClient(signature)).equals("#send")) {
                 if (AESEncryption.verifyPlainText(str)) {
                     message.append(str);
                 } else {
@@ -183,8 +190,9 @@ public class ChatServer implements Runnable {
             System.out.println("clientPhoneNumber : " + clientPhoneNumber);
             System.out.println("receiverNumber : " + receiverNumber);
             System.out.println("message : " + message);
+            System.out.println("signature is: " + signature);
             // save the message into db
-            String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber, message.toString());
+            String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber, message.toString(), signature.toString());
             //output response to client
             encryptToClient(successOrErrorMessage);
             // send the message for the other client
@@ -226,6 +234,7 @@ public class ChatServer implements Runnable {
         }
     }
 
+    // TODO: get user secret key from DataBase
     private void encryptToClient(String message, String receiverPhoneNumber, PrintWriter outputToOtherSocket) {
         String userSecretKey = DBConnector.getUserSecretKey(receiverPhoneNumber);
         if (!userSecretKey.contains("error")) {
@@ -236,6 +245,7 @@ public class ChatServer implements Runnable {
                 outputToOtherSocket.println(encryptedMessage);
                 outputToOtherSocket.println(Base64.getEncoder().encodeToString(iv));
                 outputToOtherSocket.println(mac);
+                outputToOtherSocket.println(DigitalSignature.createDigitalSignature(encryptedMessage, privateKey));
             }
             return;
         }
@@ -250,6 +260,7 @@ public class ChatServer implements Runnable {
             outputToSocket.println(encryptedMessage);
             outputToSocket.println(Base64.getEncoder().encodeToString(iv));
             outputToSocket.println(mac);
+            outputToSocket.println(DigitalSignature.createDigitalSignature(encryptedMessage, privateKey));
         }
     }
 
@@ -257,8 +268,26 @@ public class ChatServer implements Runnable {
         String message = inputFromSocket.nextLine();
         String iv = inputFromSocket.nextLine();
         String mac = inputFromSocket.nextLine();
+        String signature = inputFromSocket.nextLine();
+        if (userPublicKey != null) {
+            if (DigitalSignature.verifyDigitalSignature(message, signature, userPublicKey)) {
+                return AESEncryption.decrypt(message, sessionKey, iv, mac);
+            }
+            return VERIFY_DIGITAL_SIGNATURE_ERROR_MESSAGE;
+        }
         return AESEncryption.decrypt(message, sessionKey, iv, mac);
+    }
 
+    private String decryptFromClient(StringBuilder signatureBuilder) {
+        String message = inputFromSocket.nextLine();
+        String iv = inputFromSocket.nextLine();
+        String mac = inputFromSocket.nextLine();
+        String signature = inputFromSocket.nextLine();
+        if (DigitalSignature.verifyDigitalSignature(message, signature, userPublicKey)) {
+            signatureBuilder.append(signature);
+            return AESEncryption.decrypt(message, sessionKey, iv, mac);
+        }
+        return VERIFY_DIGITAL_SIGNATURE_ERROR_MESSAGE;
     }
 
     private void handleHandshake() throws SecurityException {
@@ -273,6 +302,14 @@ public class ChatServer implements Runnable {
             encryptToClient(SESSION_KEY_ACCEPTED);
         } else {
             throw new SecurityException(HANDSHAKE_ERROR_MESSAGE);
+        }
+    }
+
+    public void initializeUserPublicKey() {
+        try {
+            userPublicKey = KeyFactory.getInstance(RSA).generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(decryptFromClient()))); // TODO check if decrypted message is not correct
+        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+            e.printStackTrace();
         }
     }
 }
