@@ -146,6 +146,7 @@ public class ChatClient {
         if (!response.contains("error")) {
             this.isLoggedIn = true;
             this.myPhoneNumber = phoneNumber;
+            RSAEncryption.init(USER_PUBLIC_KEY_PATH(myPhoneNumber),USER_PRIVATE_KEY_PATH(myPhoneNumber));
             System.out.println(ANSI_GREEN + "I am logged in now :) " + ANSI_RESET);
         }
     }
@@ -168,6 +169,7 @@ public class ChatClient {
         if (!response.contains("error")) {
             this.isLoggedIn = true;
             this.myPhoneNumber = phoneNumber;
+            RSAEncryption.init(USER_PUBLIC_KEY_PATH(myPhoneNumber),USER_PRIVATE_KEY_PATH(myPhoneNumber));
             System.out.println(ANSI_GREEN + "I am logged in now :) " + ANSI_RESET);
         }
     }

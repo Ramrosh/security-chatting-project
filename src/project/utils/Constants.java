@@ -48,11 +48,23 @@ public class Constants {
 
     /*************************** Others ***************************/
 
-    public static final String SERVER_PUBLIC_KEY_FILE = "public.key";
+    public static String SERVER_PUBLIC_KEY_FILE = "public.key";
 
-    public static final String SERVER_PRIVATE_KEY_FILE = "private.key";
+    public static String SERVER_PRIVATE_KEY_FILE = "private.key";
 
-    public static final String REQUEST_PUBLIC_KEY_MESSAGE = "Can I have your public key?";
+    public static String PROJECT_FOLDER_PATH = "C:/Users/Hamza/Desktop/security-chatting-project"; // Change this path to your own project path
 
-    public static final String SESSION_KEY_ACCEPTED = "Session key is accepted";
+    public static String KEY_FOLDER_PATH = PROJECT_FOLDER_PATH + "/src/project/keys/";
+
+    public static String REQUEST_PUBLIC_KEY_MESSAGE = "Can I have your public key?";
+
+    public static String SESSION_KEY_ACCEPTED = "Session key is accepted";
+
+    public static String USER_PUBLIC_KEY_PATH(String phoneNumber) {
+        return phoneNumber + "_public.key";
+    }
+
+    public static String USER_PRIVATE_KEY_PATH(String phoneNumber) {
+        return phoneNumber + "_private.key";
+    }
 }

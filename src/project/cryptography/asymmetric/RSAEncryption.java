@@ -16,10 +16,10 @@ public class RSAEncryption {
      * Initialize public and private keys from the files
      * And if files do not exist this method will generate a new pair of the public and private key
      **/
-    public static void init() {
+    public static void init(String publicKeyPath, String privateKeyPath) {
         try {
-            readKeyFromFile(SERVER_PUBLIC_KEY_FILE);
-            readKeyFromFile(SERVER_PRIVATE_KEY_FILE);
+            readKeyFromFile(publicKeyPath);
+            readKeyFromFile(privateKeyPath);
         } catch (IOException ioException) {
             System.out.println("Cannot read from the file" + ioException.getMessage());
             System.out.println("Generating a new instance...");
@@ -36,8 +36,8 @@ public class RSAEncryption {
                 RSAPublicKeySpec publicKeySpec = keyFactory.getKeySpec(publicKey, RSAPublicKeySpec.class);
                 RSAPrivateKeySpec privateKeySpec = keyFactory.getKeySpec(privateKey, RSAPrivateKeySpec.class);
 
-                saveKeyToFile(SERVER_PUBLIC_KEY_FILE, publicKeySpec.getModulus(), publicKeySpec.getPublicExponent());
-                saveKeyToFile(SERVER_PRIVATE_KEY_FILE, privateKeySpec.getModulus(), privateKeySpec.getPrivateExponent());
+                saveKeyToFile(publicKeyPath, publicKeySpec.getModulus(), publicKeySpec.getPublicExponent());
+                saveKeyToFile(privateKeyPath, privateKeySpec.getModulus(), privateKeySpec.getPrivateExponent());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -48,7 +48,7 @@ public class RSAEncryption {
      * Save the key (public or private) to the file after generating it
      **/
     private static void saveKeyToFile(String fileName, BigInteger modulus, BigInteger exponent) throws IOException {
-        try (ObjectOutputStream ObjOutputStream = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(fileName)))) {
+        try (ObjectOutputStream ObjOutputStream = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(KEY_FOLDER_PATH + fileName)))) {
             ObjOutputStream.writeObject(modulus);
             ObjOutputStream.writeObject(exponent);
         } catch (Exception e) {
@@ -62,7 +62,7 @@ public class RSAEncryption {
      **/
     private static Key readKeyFromFile(String keyFileName) throws IOException {
         Key key = null;
-        InputStream inputStream = new FileInputStream(keyFileName);
+        InputStream inputStream = new FileInputStream(KEY_FOLDER_PATH + keyFileName);
         try (ObjectInputStream objectInputStream = new ObjectInputStream(new BufferedInputStream(inputStream))) {
             BigInteger modulus = (BigInteger) objectInputStream.readObject();
             BigInteger exponent = (BigInteger) objectInputStream.readObject();
