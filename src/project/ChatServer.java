@@ -181,7 +181,12 @@ public class ChatServer implements Runnable {
             StringBuilder message = new StringBuilder();
             String str = "";
             while (!(str = decryptFromClient(clientPhoneNumber)).equals("#send")) {
-                message.append(str);
+                if (AESEncryption.verifyPlainText(str)) {
+                    message.append(str);
+                } else {
+                    encryptToClient(str, clientPhoneNumber);
+                    return;
+                }
             }
             System.out.println("contactChoice " + contactChoice);
             System.out.println("clientPhoneNumber : " + clientPhoneNumber);
