@@ -108,7 +108,7 @@ public class CAServer {
                 Socket socket = new Socket(ip, Integer.parseInt(receivedCSR.subject));
                 Scanner inputFromSocket=new Scanner(socket.getInputStream());
                 PrintWriter outputToSocket=new PrintWriter(socket.getOutputStream(),true);
-                outputToSocket.println("verifySubject");
+                outputToSocket.println("ca");//added this because the client could be ChatClient too, which should be handled differently
                 String randomVerificationCode=randomGeneratedStr(10);
                 outputToSocket.println(randomVerificationCode);
                 String receivedCode=inputFromSocket.nextLine();

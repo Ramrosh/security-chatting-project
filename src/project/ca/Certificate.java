@@ -68,7 +68,7 @@ public class Certificate implements Serializable {
         return certificate;
     }
 
-    public Boolean VerifyCertificate(Certificate certificate,String subject){
+    public static Boolean verifyCertificate(Certificate certificate,String subject){
         //check signature
         boolean signatureIsValid= DigitalSignature.verifyDigitalSignature(certificate.getBase64EncodedCertificateBody(),certificate.caSignature,CAPublicKey);
         //check subject

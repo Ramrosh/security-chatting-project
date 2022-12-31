@@ -7,6 +7,7 @@ import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -42,7 +43,7 @@ public class ChatServer implements Runnable {
         try {
             certificate=Certificate.retrieveFromFile(SERVER_CERTIFICATE_FILE);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("certificate is not created yet :)");
         }
         assert publicKey != null : INIT_SERVER_PUBLIC_ERROR_MESSAGE;
         assert privateKey != null : INIT_SERVER_PRIVATE_ERROR_MESSAGE;
@@ -61,14 +62,15 @@ public class ChatServer implements Runnable {
         try {
             this.inputFromSocket = new Scanner(socket.getInputStream());//input from client
             this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
-            //FIXME::the problem lies in these two commented lines
-//            if(inputFromSocket.hasNext()&&inputFromSocket.nextLine().equals("verifySubject"))//handle the code verification request from CA
-//            {
-//                 this.handleSubjectVerification();
-//                 return;
-//            }
-//            else
-            handleHandshake();
+            String clientType=inputFromSocket.nextLine();//types are:ca,client.
+            if(clientType.equals("ca"))
+            {
+                //handle the code verification request from CA
+                 this.handleSubjectVerification();
+                 return;
+            }
+            else
+                handleHandshake();
             while (inputFromSocket.hasNextLine()) {
                 String clientRequestChoice = inputFromSocket.nextLine();
                 switch (clientRequestChoice) {
@@ -118,6 +120,7 @@ public class ChatServer implements Runnable {
         String receivedCode=inputFromSocket.nextLine();
         System.out.println("enter the code : "+receivedCode);
         String inputCode=new Scanner(System.in).nextLine();
+        System.out.println("you have input : "+inputCode);
         outputToSocket.println(inputCode);
     }
     //handling inputs and outputs of requests&responses methods
@@ -309,12 +312,15 @@ public class ChatServer implements Runnable {
     private void handleHandshake() throws SecurityException {
         String request = inputFromSocket.nextLine();
 
-        if (Objects.equals(request, REQUEST_PUBLIC_KEY_MESSAGE)) {
-            System.out.println("Handshake Started :), Sending public key...");
-
-            outputToSocket.println(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
-            sessionKey = RSAEncryption.decrypt(inputFromSocket.nextLine(), privateKey);
-
+        if (Objects.equals(request, REQUEST_DIGITAL_SIGNATURE_MESSAGE)) {
+            System.out.println("Handshake Started :), Sending digital certificate...");
+            try {
+                ObjectOutputStream objectToSocket=new ObjectOutputStream(socket.getOutputStream());
+                objectToSocket.writeObject(this.certificate);
+                sessionKey = RSAEncryption.decrypt(inputFromSocket.nextLine(), privateKey);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             encryptToClient(SESSION_KEY_ACCEPTED);
         } else {
             throw new SecurityException(HANDSHAKE_ERROR_MESSAGE);

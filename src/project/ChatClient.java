@@ -1,17 +1,17 @@
 package project;
 
+import project.ca.Certificate;
 import project.cryptography.asymmetric.DigitalSignature;
 import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
+import java.io.ObjectInputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 
 import static project.utils.ConsolePrintingColors.*;
@@ -20,6 +20,7 @@ import static project.utils.Constants.*;
 public class ChatClient {
 
     private static final PublicKey CAPublicKey = (PublicKey) RSAEncryption.getPublicKey(CA_PUBLIC_KEY_FILE);
+    private final int serverPort = 11111;
     private String sessionKey;
 
     //attributes
@@ -52,13 +53,14 @@ public class ChatClient {
     {
         try {
             InetAddress ip = InetAddress.getLocalHost();
-            Socket socket = new Socket(ip, 11111);
+            Socket socket = new Socket(ip, serverPort);
             System.out.println("my port : " + socket.getLocalPort());
             this.inputFromTerminal = new Scanner(System.in);
             this.inputFromSocket = new Scanner(socket.getInputStream());//input from server
             this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to server
             ClientGetMessages clientGetMessages = new ClientGetMessages();
-            handleHandshake();
+            outputToSocket.println("client");//added this because the client could be CA too, which should be handled differently
+            handleHandshake(socket);
             clientRequests:
             do {
                 if (!this.isLoggedIn)//case the client is not logged in
@@ -268,7 +270,7 @@ public class ChatClient {
     //util methods
 
     private class ClientGetMessages extends Thread {
-        static ServerSocket getMessagesServerSocket;
+         ServerSocket getMessagesServerSocket;
 
         public void stopGetMessages() {
             try {
@@ -338,17 +340,21 @@ public class ChatClient {
         }
     }
 
-    private void handleHandshake() throws SecurityException {
+    private void handleHandshake(Socket socket) throws SecurityException {
         try {
-            outputToSocket.println(REQUEST_PUBLIC_KEY_MESSAGE);
-
-            serverPublicKey = KeyFactory.getInstance(RSA).generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(inputFromSocket.nextLine())));
-
-            sessionKey = Base64.getEncoder().encodeToString(AESEncryption.generateAESKey().getEncoded());
-
-            outputToSocket.println(RSAEncryption.encrypt(sessionKey, serverPublicKey));
-
-            System.out.println(decryptFromServer());
+            outputToSocket.println(REQUEST_DIGITAL_SIGNATURE_MESSAGE);
+            ObjectInputStream objectFromSocket=new ObjectInputStream(socket.getInputStream());
+            Certificate serverCertificate=(Certificate) objectFromSocket.readObject();
+            boolean isValid=Certificate.verifyCertificate(serverCertificate,String.valueOf(serverPort));
+            if(isValid){
+                System.out.println("digital certificate accepted, generating session key....");
+                serverPublicKey = serverCertificate.subjectPublicKey;
+                sessionKey = Base64.getEncoder().encodeToString(AESEncryption.generateAESKey().getEncoded());
+                outputToSocket.println(RSAEncryption.encrypt(sessionKey, serverPublicKey));
+                System.out.println(decryptFromServer());
+            }else{
+                System.out.println("hand shake failed: invalid certificate");
+            }
         } catch (Exception e) {
             throw new SecurityException(HANDSHAKE_ERROR_MESSAGE);
         }
