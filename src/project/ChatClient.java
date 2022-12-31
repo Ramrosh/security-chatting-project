@@ -235,11 +235,12 @@ public class ChatClient {
         if (!hasError) {
             String TERMINATOR_STRING = "#send";
             System.out.println("enter the message: (press " + TERMINATOR_STRING + " to send)");
-            String message;
-            while (!(message = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
-                encryptToServer(message);
+            StringBuilder message = new StringBuilder();;
+            String str;
+            while (!(str = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
+                message.append(str);
             }
-            encryptToServer(TERMINATOR_STRING);
+            encryptToServer(message.toString());
             System.out.println("sending...");
             //get response from server
             System.out.println("Response from server ( " + decryptFromServer() + " )");

@@ -175,24 +175,19 @@ public class ChatServer implements Runnable {
         }
         if (!hasError)//if no error was received by db send the message
         {
-            StringBuilder message = new StringBuilder();
             StringBuilder signature = new StringBuilder();
-            String str = "";
-            while (!(str = decryptFromClient(signature)).equals("#send")) {
-                if (AESEncryption.verifyPlainText(str)) {
-                    message.append(str);
-                } else {
-                    encryptToClient(str);
-                    return;
-                }
+            String str = decryptFromClient(signature);
+            if (!AESEncryption.verifyPlainText(str)) {
+                encryptToClient(str);
+                return;
             }
             System.out.println("contactChoice " + contactChoice);
             System.out.println("clientPhoneNumber : " + clientPhoneNumber);
             System.out.println("receiverNumber : " + receiverNumber);
-            System.out.println("message : " + message);
-            System.out.println("signature is: " + signature);
+            System.out.println("message : " + str);
+            System.out.println("signature is: " + signature.toString());
             // save the message into db
-            String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber, message.toString(), signature.toString());
+            String successOrErrorMessage = DBConnector.sendMessage(clientPhoneNumber, receiverNumber, str, signature.toString());
             //output response to client
             encryptToClient(successOrErrorMessage);
             // send the message for the other client
@@ -201,7 +196,7 @@ public class ChatServer implements Runnable {
                     System.out.println("other socket: host and port " + InetAddress.getLocalHost() + getPortNum(receiverNumber));
                     Socket otherSocket = new Socket(InetAddress.getLocalHost(), getPortNum(receiverNumber));
                     PrintWriter outputToOtherSocket = new PrintWriter(otherSocket.getOutputStream(), true);
-                    String response = ANSI_BLUE + "new message arrived from : " + clientPhoneNumber + ", content: " + message + ANSI_RESET;
+                    String response = ANSI_BLUE + "new message arrived from : " + clientPhoneNumber + ", content: " + str + ANSI_RESET;
                     encryptToClient(response, receiverNumber, outputToOtherSocket);
                     outputToOtherSocket.close();
                     otherSocket.close();
