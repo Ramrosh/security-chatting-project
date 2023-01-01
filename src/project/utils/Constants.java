@@ -42,6 +42,8 @@ public class Constants {
 
     public static String INIT_SERVER_PUBLIC_ERROR_MESSAGE = "Cannot read the server public key :(";
 
+    public static String USER_PUBLIC_KEY_ERROR = "Cannot read user public key :(";
+
     public static String INIT_SERVER_PRIVATE_ERROR_MESSAGE = "Cannot read the server private key :(";
 
     public static String HANDSHAKE_ERROR_MESSAGE = "Handshake process failed :(";
@@ -65,7 +67,7 @@ public class Constants {
 
     public static String REQUEST_PUBLIC_KEY_MESSAGE = "Can I have your public key?";
 
-    public static String SESSION_KEY_ACCEPTED = "Session key is accepted";
+    public static final String SESSION_KEY_ACCEPTED = "The Session key accepted";
 
     public static String USER_PUBLIC_KEY_PATH(String phoneNumber) {
         return phoneNumber + "_public.key";

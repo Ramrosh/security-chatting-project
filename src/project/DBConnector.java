@@ -79,18 +79,16 @@ public class DBConnector {
         }
     }
 
-    private static String updateUser(@NotNull String phoneNumber, @NotNull String certainColumn, @NotNull String value) {
+    private static String updateUserSecretKey(@NotNull String phoneNumber, @NotNull String value) {
         Connection connection = connect();
-        String updateSQL = "UPDATE users SET ? = ? where phone_number = ?";
+        String updateSQL = "UPDATE users SET secret_key = ? where phone_number = ?";
 
         try {
             assert connection != null : "connection error";
             assert (phoneNumber.length() <= 10 && phoneNumber.matches("\\d+")) : "invalid input";
-            assert (certainColumn.equals("password") || certainColumn.equals("phone_number") || certainColumn.equals("secret_key")) : "invalid chosen column";
             PreparedStatement preparedStatement = connection.prepareStatement(updateSQL);
-            preparedStatement.setString(1, certainColumn);
-            preparedStatement.setString(2, value);
-            preparedStatement.setString(3, phoneNumber);
+            preparedStatement.setString(1, value);
+            preparedStatement.setString(2, phoneNumber);
             System.out.println(preparedStatement);
             int affectedRows = preparedStatement.executeUpdate();
             assert affectedRows > 0 : "error while inserting";
@@ -258,12 +256,13 @@ public class DBConnector {
     }
 
     public static String setUserSecretKey(String phoneNumber, String secretKey) {
-        return updateUser(phoneNumber, "secret_key", secretKey);
+        return updateUserSecretKey(phoneNumber, secretKey);
     }
 
-    public static String setUserPublicKey(String phoneNumber, String publicKey) {
-        return updateUser(phoneNumber, "public_key", publicKey);
-    }
+
+//    public static String setUserPublicKey(String phoneNumber, String publicKey) {
+//        return updateUser(phoneNumber, "public_key", publicKey);
+//    }
 
     public static String addingContact(String adderNumber, String addedNumber) {
         String findUserResult = findUser(addedNumber, "");

@@ -9,14 +9,17 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.security.*;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 
-import static project.utils.Constants.*;
 import static project.utils.ConsolePrintingColors.ANSI_BLUE;
 import static project.utils.ConsolePrintingColors.ANSI_RESET;
+import static project.utils.Constants.*;
 
 public class ChatServer implements Runnable {
 
@@ -117,14 +120,17 @@ public class ChatServer implements Runnable {
         outputToSocket.println(response);
         //if valid add phoneNumber and port to socketIdPairs
         if (validPassword) {
-            PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
-            System.out.println(PortIdCollection.portIDPairs);
-            initializeUserPublicKey();
+            String sessionKeySuccessOrErrorMessage = DBConnector.setUserSecretKey(phoneNumber, sessionKey);
+            if (!sessionKeySuccessOrErrorMessage.contains("error")) {
+                PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
+                System.out.println(PortIdCollection.portIDPairs);
+                initializeUserPublicKey();
+            }
         }
     }
 
 
-    private void handleUserSignup() throws Exception {
+    private void handleUserSignup() {
         //get phone number and password from client
         String phoneNumber = inputFromSocket.nextLine();
         String password = inputFromSocket.nextLine();
@@ -135,9 +141,12 @@ public class ChatServer implements Runnable {
         outputToSocket.println(successOrErrorMessage);
         //if valid add phoneNumber and port to socketIdPairs
         if (!successOrErrorMessage.contains("error")) {
-            PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
-            System.out.println(PortIdCollection.portIDPairs);
-            initializeUserPublicKey();
+            String sessionKeySuccessOrErrorMessage = DBConnector.setUserSecretKey(phoneNumber, sessionKey);
+            if (!sessionKeySuccessOrErrorMessage.contains("error")) {
+                PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
+                System.out.println(PortIdCollection.portIDPairs);
+                initializeUserPublicKey();
+            }
         }
     }
 
@@ -229,7 +238,6 @@ public class ChatServer implements Runnable {
         }
     }
 
-    // TODO: get user secret key from DataBase
     private void encryptToClient(String message, String receiverPhoneNumber, PrintWriter outputToOtherSocket) {
         String userSecretKey = DBConnector.getUserSecretKey(receiverPhoneNumber);
         if (!userSecretKey.contains("error")) {
@@ -302,8 +310,9 @@ public class ChatServer implements Runnable {
 
     public void initializeUserPublicKey() {
         try {
-            userPublicKey = KeyFactory.getInstance(RSA).generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(decryptFromClient()))); // TODO check if decrypted message is not correct
+            userPublicKey = KeyFactory.getInstance(RSA).generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(decryptFromClient())));
         } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+            System.out.println(USER_PUBLIC_KEY_ERROR);
             e.printStackTrace();
         }
     }
