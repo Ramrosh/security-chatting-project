@@ -53,7 +53,7 @@ public class Constants {
     /*************************** Others ***************************/
 
     // FIXME Change this path to your own project path
-    public static String PROJECT_FOLDER_PATH = "C:/Users/ASUS/Desktop/securiity-project/security-chatting-project";
+    public static String PROJECT_FOLDER_PATH = "C:/Users/Hamza/Desktop/security-chatting-project";
 
     public static String SERVER_PUBLIC_KEY_FILE = "public.key";
 
@@ -73,7 +73,7 @@ public class Constants {
 
     public static final String SERVER_CSR_MESSAGE = "server csr";
 
-    public static String SESSION_KEY_ACCEPTED = "Session key is accepted";
+    public static final String SESSION_KEY_ACCEPTED = "The Session key accepted";
 
     public static String CA_PUBLIC_KEY_FILE = "ca_public.key";
 
