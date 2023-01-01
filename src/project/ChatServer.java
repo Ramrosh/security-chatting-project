@@ -233,7 +233,6 @@ public class ChatServer implements Runnable {
         }
     }
 
-    // TODO: get user secret key from DataBase
     private void encryptToClient(String message, String receiverPhoneNumber, PrintWriter outputToOtherSocket) {
         String userSecretKey = DBConnector.getUserSecretKey(receiverPhoneNumber);
         if (!userSecretKey.contains("error")) {
