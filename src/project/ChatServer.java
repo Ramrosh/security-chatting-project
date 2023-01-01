@@ -112,9 +112,13 @@ public class ChatServer implements Runnable {
         String response = validPassword ? "logged in successfully" : "error in logging in";
         outputToSocket.println(response);
         //if valid add phoneNumber and port to socketIdPairs
+
         if (validPassword) {
-            PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
-            System.out.println(PortIdCollection.portIDPairs);
+            String sessionKeySuccessOrErrorMessage = DBConnector.setUserSecretKey(phoneNumber, sessionKey);
+            if (!sessionKeySuccessOrErrorMessage.contains("error")) {
+                PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
+                System.out.println(PortIdCollection.portIDPairs);
+            }
         }
     }
 
@@ -130,8 +134,11 @@ public class ChatServer implements Runnable {
         outputToSocket.println(successOrErrorMessage);
         //if valid add phoneNumber and port to socketIdPairs
         if (!successOrErrorMessage.contains("error")) {
-            PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
-            System.out.println(PortIdCollection.portIDPairs);
+            String sessionKeySuccessOrErrorMessage = DBConnector.setUserSecretKey(phoneNumber, sessionKey);
+            if (!sessionKeySuccessOrErrorMessage.contains("error")) {
+                PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
+                System.out.println(PortIdCollection.portIDPairs);
+            }
         }
     }
 
@@ -226,7 +233,6 @@ public class ChatServer implements Runnable {
         }
     }
 
-    // TODO: get user secret key from DataBase
     private void encryptToClient(String message, String receiverPhoneNumber, PrintWriter outputToOtherSocket) {
         String userSecretKey = DBConnector.getUserSecretKey(receiverPhoneNumber);
         if (!userSecretKey.contains("error")) {

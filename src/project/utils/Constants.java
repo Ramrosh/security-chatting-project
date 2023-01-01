@@ -54,5 +54,5 @@ public class Constants {
 
     public static final String REQUEST_PUBLIC_KEY_MESSAGE = "Can I have your public key?";
 
-    public static final String SESSION_KEY_ACCEPTED = "Session key is accepted";
+    public static final String SESSION_KEY_ACCEPTED = "The Session key accepted";
 }
