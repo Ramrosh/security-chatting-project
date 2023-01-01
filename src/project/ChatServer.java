@@ -120,12 +120,7 @@ public class ChatServer implements Runnable {
         outputToSocket.println(response);
         //if valid add phoneNumber and port to socketIdPairs
         if (validPassword) {
-            String sessionKeySuccessOrErrorMessage = DBConnector.setUserSecretKey(phoneNumber, sessionKey);
-            if (!sessionKeySuccessOrErrorMessage.contains("error")) {
-                PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
-                System.out.println(PortIdCollection.portIDPairs);
-                initializeUserPublicKey();
-            }
+            startUserSession(phoneNumber);
         }
     }
 
@@ -141,12 +136,7 @@ public class ChatServer implements Runnable {
         outputToSocket.println(successOrErrorMessage);
         //if valid add phoneNumber and port to socketIdPairs
         if (!successOrErrorMessage.contains("error")) {
-            String sessionKeySuccessOrErrorMessage = DBConnector.setUserSecretKey(phoneNumber, sessionKey);
-            if (!sessionKeySuccessOrErrorMessage.contains("error")) {
-                PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
-                System.out.println(PortIdCollection.portIDPairs);
-                initializeUserPublicKey();
-            }
+            startUserSession(phoneNumber);
         }
     }
 
@@ -314,6 +304,22 @@ public class ChatServer implements Runnable {
         } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
             System.out.println(USER_PUBLIC_KEY_ERROR);
             e.printStackTrace();
+        }
+    }
+
+    public void startUserSession(String phoneNumber) {
+        // store the session key in DB
+        String sessionKeySuccessOrErrorMessage = DBConnector.setUserSecretKey(phoneNumber, sessionKey);
+        // if session key stored successfully initialize user public key
+        if (!sessionKeySuccessOrErrorMessage.contains("error")) {
+            initializeUserPublicKey();
+            // store the public key in DB
+            String publicKeySuccessOrErrorMessage = DBConnector.setUserPublicKey(phoneNumber, Base64.getEncoder().encodeToString(publicKey.getEncoded()));
+            // if public key stored successfully
+            if (!publicKeySuccessOrErrorMessage.contains("error")) {
+                PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));
+                System.out.println(PortIdCollection.portIDPairs);
+            }
         }
     }
 }

@@ -99,6 +99,27 @@ public class DBConnector {
         return "Updated successfully = " + phoneNumber + " " + value;
     }
 
+    private static String updateUserPublicKey(@NotNull String phoneNumber, @NotNull String value) {
+        Connection connection = connect();
+        String updateSQL = "UPDATE users SET public_key = ? where phone_number = ?";
+
+        try {
+            assert connection != null : "connection error";
+            assert (phoneNumber.length() <= 10 && phoneNumber.matches("\\d+")) : "invalid input";
+            PreparedStatement preparedStatement = connection.prepareStatement(updateSQL);
+            preparedStatement.setString(1, value);
+            preparedStatement.setString(2, phoneNumber);
+            System.out.println(preparedStatement);
+            int affectedRows = preparedStatement.executeUpdate();
+            assert affectedRows > 0 : "error while inserting";
+        } catch (SQLException | AssertionError exception) {
+            exception.printStackTrace();
+            return "sql error : " + exception.getMessage();
+        }
+        return "Updated successfully = " + phoneNumber + " " + value;
+    }
+
+
     /************************************ Contact ***********************************/
     private static String findContact(String adderNumber, String addedNumber) {
         Connection connection = connect();
@@ -260,9 +281,9 @@ public class DBConnector {
     }
 
 
-//    public static String setUserPublicKey(String phoneNumber, String publicKey) {
-//        return updateUser(phoneNumber, "public_key", publicKey);
-//    }
+    public static String setUserPublicKey(String phoneNumber, String publicKey) {
+        return updateUserPublicKey(phoneNumber, publicKey);
+    }
 
     public static String addingContact(String adderNumber, String addedNumber) {
         String findUserResult = findUser(addedNumber, "");
