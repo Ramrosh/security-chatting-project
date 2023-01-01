@@ -350,7 +350,7 @@ public class ChatClient {
                 System.out.println("digital certificate accepted, generating session key....");
                 serverPublicKey = serverCertificate.subjectPublicKey;
                 sessionKey = Base64.getEncoder().encodeToString(AESEncryption.generateAESKey().getEncoded());
-                outputToSocket.println(RSAEncryption.encrypt(sessionKey, serverPublicKey));
+                outputToSocket.println(   RSAEncryption.encrypt(sessionKey, serverPublicKey));
                 System.out.println(decryptFromServer());
             }else{
                 System.out.println("hand shake failed: invalid certificate");
