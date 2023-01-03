@@ -7,6 +7,7 @@ import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -33,6 +34,8 @@ public class ChatServer implements Runnable {
     private String sessionKey;
     private PublicKey userPublicKey;
     private Certificate certificate;
+
+    private ObjectOutputStream objectOutputToSocket;
 
 
     ChatServer(Socket socket) {
@@ -165,6 +168,7 @@ public class ChatServer implements Runnable {
         String clientPhoneNumber = inputFromSocket.nextLine();
         String contactChoice = inputFromSocket.nextLine();
         String receiverNumber = "";
+        Certificate receiverCertificate = null;
         boolean hasError = false;
         switch (contactChoice) {
             case "newContact": {
@@ -195,6 +199,14 @@ public class ChatServer implements Runnable {
         }
         if (!hasError)//if no error was received by db send the message
         {
+
+            try {
+                receiverCertificate = Certificate.retrieveFromFile(CLIENT_CERTIFICATE_PATH(receiverNumber));
+                objectOutputToSocket.writeObject(receiverCertificate);
+            } catch (IOException e) {
+                System.out.println("certificate is not created yet :)");
+            }
+
             StringBuilder signature = new StringBuilder();
             String str = decryptFromClient(signature);
             if (!AESEncryption.verifyPlainText(str)) {

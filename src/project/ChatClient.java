@@ -5,7 +5,9 @@ import project.cryptography.asymmetric.DigitalSignature;
 import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
+import java.io.BufferedInputStream;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -34,6 +36,8 @@ public class ChatClient {
     private PublicKey publicKey;
     private PrivateKey privateKey;
     private PublicKey serverPublicKey;
+
+    private ObjectInputStream objectInputFromSocket;
 
     //constructors
     public ChatClient() {
@@ -225,7 +229,6 @@ public class ChatClient {
                             System.out.println("(" + i + "): " + MyContacts.get(i - 1));
                         }
                         int id = Integer.parseInt(inputFromTerminal.nextLine());
-                        receiverNumber = MyContacts.get(id - 1);
                         outputToSocket.println(receiverNumber);
                     }
                     break;
@@ -235,14 +238,17 @@ public class ChatClient {
                 break;
         }
         if (!hasError) {
+            Certificate receiverCertificate = (Certificate) objectInputFromSocket.readObject();
             String TERMINATOR_STRING = "#send";
             System.out.println("enter the message: (press " + TERMINATOR_STRING + " to send)");
-            StringBuilder message = new StringBuilder();;
+            StringBuilder message = new StringBuilder();
+            ;
             String str;
             while (!(str = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
                 message.append(str);
             }
-            encryptToServer(message.toString());
+            String encryptedMessage = RSAEncryption.encrypt(message.toString(), receiverCertificate.subjectPublicKey);
+            encryptToServer(encryptedMessage);
             System.out.println("sending...");
             //get response from server
             System.out.println("Response from server ( " + decryptFromServer() + " )");
@@ -257,7 +263,7 @@ public class ChatClient {
         if (AESEncryption.verifyPlainText(message)) {
             int messagesNumber = Integer.parseInt(message);
             for (int i = 0; i < messagesNumber; i++) {
-                System.out.println(decryptFromServer());
+                System.out.println(RSAEncryption.decrypt(decryptFromServer(), privateKey));
             }
         }
     }
@@ -270,7 +276,7 @@ public class ChatClient {
     //util methods
 
     private class ClientGetMessages extends Thread {
-         ServerSocket getMessagesServerSocket;
+        ServerSocket getMessagesServerSocket;
 
         public void stopGetMessages() {
             try {
@@ -343,16 +349,16 @@ public class ChatClient {
     private void handleHandshake(Socket socket) throws SecurityException {
         try {
             outputToSocket.println(REQUEST_DIGITAL_SIGNATURE_MESSAGE);
-            ObjectInputStream objectFromSocket=new ObjectInputStream(socket.getInputStream());
-            Certificate serverCertificate=(Certificate) objectFromSocket.readObject();
-            boolean isValid=Certificate.verifyCertificate(serverCertificate,String.valueOf(serverPort));
-            if(isValid){
+            ObjectInputStream objectFromSocket = new ObjectInputStream(socket.getInputStream());
+            Certificate serverCertificate = (Certificate) objectFromSocket.readObject();
+            boolean isValid = Certificate.verifyCertificate(serverCertificate, String.valueOf(serverPort));
+            if (isValid) {
                 System.out.println("digital certificate accepted, generating session key....");
                 serverPublicKey = serverCertificate.subjectPublicKey;
                 sessionKey = Base64.getEncoder().encodeToString(AESEncryption.generateAESKey().getEncoded());
-                outputToSocket.println(   RSAEncryption.encrypt(sessionKey, serverPublicKey));
+                outputToSocket.println(RSAEncryption.encrypt(sessionKey, serverPublicKey));
                 System.out.println(decryptFromServer());
-            }else{
+            } else {
                 System.out.println("hand shake failed: invalid certificate");
             }
         } catch (Exception e) {

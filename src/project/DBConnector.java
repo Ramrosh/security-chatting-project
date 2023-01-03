@@ -200,7 +200,7 @@ public class DBConnector {
     /************************************ Message ***********************************/
     private static String addMessage(String senderPhoneNumber, String receiverNumber, String message, String signature) {
         Connection connection = connect();
-        String insertSQL = "INSERT INTO messages (content, sender_phone_number, receiver_phone_number,signature) VALUES (?, ?, ?,?)";
+        String insertSQL = "INSERT INTO encrypted_messages (content, sender_phone_number, receiver_phone_number,signature) VALUES (?, ?, ?,?)";
         try {
             assert connection != null : "connection error";
             assert ((senderPhoneNumber.length() <= 10) && (receiverNumber.length() <= 10) &&
@@ -222,7 +222,7 @@ public class DBConnector {
 
     public static ArrayList<HashMap> getMessages(String clientPhoneNumber) {
         Connection connection = connect();
-        String findSQL = "Select * from messages where sender_phone_number = ? OR receiver_phone_number =?";
+        String findSQL = "Select * from encrypted_messages where sender_phone_number = ? OR receiver_phone_number =?";
         try {
             assert connection != null : "connection error";
             assert (clientPhoneNumber.length() <= 10 && clientPhoneNumber.matches("\\d+")) : "invalid input";

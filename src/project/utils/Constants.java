@@ -53,7 +53,7 @@ public class Constants {
     /*************************** Others ***************************/
 
     // FIXME Change this path to your own project path
-    public static String PROJECT_FOLDER_PATH = "C:/Users/Hamza/Desktop/security-chatting-project";
+    public static String PROJECT_FOLDER_PATH = "E:/iss/security-chatting-project";
 
     public static String SERVER_PUBLIC_KEY_FILE = "public.key";
 
