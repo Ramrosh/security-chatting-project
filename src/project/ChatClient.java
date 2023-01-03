@@ -292,8 +292,7 @@ public class ChatClient {
                 isLoggedIn = false;
                 getMessagesServerSocket.close();
                 this.interrupt();
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception ignored) {
             }
         }
 
@@ -308,8 +307,7 @@ public class ChatClient {
                         System.out.println(decryptFromServer(inputFromOtherSocket));
                     }
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception ignored) {
             }
         }
     }
