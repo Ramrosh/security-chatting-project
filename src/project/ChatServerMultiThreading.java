@@ -48,12 +48,13 @@ public class ChatServerMultiThreading {
                     InetAddress ip = InetAddress.getLocalHost();
                     Socket socket = new Socket(ip, 22222);
                     //initializing input&output streams
-                    Scanner inputFromSocket = new Scanner(socket.getInputStream());
-                    PrintWriter outputToSocket = new PrintWriter(socket.getOutputStream(), true);
+                    //Scanner inputFromSocket = new Scanner(socket.getInputStream());
+                    //PrintWriter outputToSocket = new PrintWriter(socket.getOutputStream(), true);
                     ObjectOutputStream objectOutputToSocket = new ObjectOutputStream(socket.getOutputStream());
                     ObjectInputStream objectInputFromSocket = new ObjectInputStream(socket.getInputStream());
                     //send request of
-                    outputToSocket.println(SERVER_CSR_MESSAGE);
+                    //outputToSocket.println(SERVER_CSR_MESSAGE);
+                    objectOutputToSocket.writeObject(SERVER_CSR_MESSAGE);
                     //making CSR object
                     String subject = String.valueOf(port);
                     PublicKey serverPublicKey = (PublicKey) RSAEncryption.getPublicKey(SERVER_PUBLIC_KEY_FILE);
@@ -61,7 +62,8 @@ public class ChatServerMultiThreading {
                     //send CSR object through socket
                     objectOutputToSocket.writeObject(serverCSR);
                     //receive CA response
-                    String response = inputFromSocket.nextLine();
+                   // String response = inputFromSocket.nextLine();
+                    String response = (String) objectInputFromSocket.readObject();
                     if (response.equals("approved")) {
                         Certificate certificate = (Certificate) objectInputFromSocket.readObject();
                         //check signature of certificate

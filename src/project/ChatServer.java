@@ -48,6 +48,12 @@ public class ChatServer implements Runnable {
         } catch (IOException e) {
             System.out.println("certificate is not created yet :)");
         }
+        try {
+            objectOutputToSocket = new ObjectOutputStream(socket.getOutputStream());
+            objectOutputToSocket.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         assert publicKey != null : INIT_SERVER_PUBLIC_ERROR_MESSAGE;
         assert privateKey != null : INIT_SERVER_PRIVATE_ERROR_MESSAGE;
     }
@@ -335,10 +341,17 @@ public class ChatServer implements Runnable {
         }
     }
 
-    public void initializeUserPublicKey() {
+    public void initializeUserPublicKey(String phoneNumber) {
         try {
-            userPublicKey = KeyFactory.getInstance(RSA).generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(decryptFromClient()))); // TODO check if decrypted message is not correct
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+            ObjectInputStream objectFromSocket=new ObjectInputStream(socket.getInputStream());
+            Certificate userCertificate=(Certificate) objectFromSocket.readObject();
+            boolean isValid=Certificate.verifyCertificate(userCertificate,phoneNumber);
+            if(isValid){
+                userPublicKey = userCertificate.subjectPublicKey ;
+            }else{
+                System.out.println("invalid certificate");
+            }
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -348,7 +361,7 @@ public class ChatServer implements Runnable {
         String sessionKeySuccessOrErrorMessage = DBConnector.setUserSecretKey(phoneNumber, sessionKey);
         // if session key stored successfully initialize user public key
         if (!sessionKeySuccessOrErrorMessage.contains("error")) {
-            initializeUserPublicKey();
+            initializeUserPublicKey(phoneNumber);
             // store the public key in DB
             String publicKeySuccessOrErrorMessage = DBConnector.setUserPublicKey(phoneNumber, Base64.getEncoder().encodeToString(publicKey.getEncoded()));
             // if public key stored successfully

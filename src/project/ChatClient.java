@@ -1,11 +1,15 @@
 package project;
 
+import project.ca.CSR;
 import project.ca.Certificate;
+import project.ca.exceptions.IllegalCertificateException;
+import project.ca.exceptions.UnproccessableCSRException;
 import project.cryptography.asymmetric.DigitalSignature;
 import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
 import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
@@ -36,6 +40,7 @@ public class ChatClient {
     private PublicKey publicKey;
     private PrivateKey privateKey;
     private PublicKey serverPublicKey;
+    private final Socket socket;
 
     private ObjectInputStream objectInputFromSocket;
 
@@ -43,6 +48,13 @@ public class ChatClient {
     public ChatClient() {
         this.isLoggedIn = false;
         this.myPhoneNumber = "";
+        try {
+            InetAddress ip = InetAddress.getLocalHost();
+            socket = new Socket(ip, serverPort);
+            this.objectInputFromSocket=new ObjectInputStream(socket.getInputStream());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public int getPortNum() {
@@ -56,8 +68,6 @@ public class ChatClient {
     public void run()//run client to send requests to server
     {
         try {
-            InetAddress ip = InetAddress.getLocalHost();
-            Socket socket = new Socket(ip, serverPort);
             System.out.println("my port : " + socket.getLocalPort());
             this.inputFromTerminal = new Scanner(System.in);
             this.inputFromSocket = new Scanner(socket.getInputStream());//input from server
@@ -138,7 +148,7 @@ public class ChatClient {
     }
 
     //handling requests
-    private void requestLogin() {
+    private void requestLogin() throws IOException {
         //send to  server that it is login request
         outputToSocket.println("login");
         //input signup parameters
@@ -157,11 +167,13 @@ public class ChatClient {
             this.isLoggedIn = true;
             this.myPhoneNumber = phoneNumber;
             initializeKeys();
+            ensureCertificateExistenceOrSendCSR();
+            initCertificateAndSendToServer();
             System.out.println(ANSI_GREEN + "I am logged in now :) " + ANSI_RESET);
         }
     }
 
-    private void requestSignup() {
+    private void requestSignup() throws IOException {
         //send to  server that it is signup request
         outputToSocket.println("signup");
         //input signup parameters
@@ -180,9 +192,12 @@ public class ChatClient {
             this.isLoggedIn = true;
             this.myPhoneNumber = phoneNumber;
             initializeKeys();
+            ensureCertificateExistenceOrSendCSR();
+            initCertificateAndSendToServer();
             System.out.println(ANSI_GREEN + "I am logged in now :) " + ANSI_RESET);
         }
     }
+
 
     private void requestSendingNewMessage() throws Exception {
         //send to  server that it is sending message request
@@ -229,7 +244,7 @@ public class ChatClient {
                             System.out.println("(" + i + "): " + MyContacts.get(i - 1));
                         }
                         int id = Integer.parseInt(inputFromTerminal.nextLine());
-                        outputToSocket.println(receiverNumber);
+                        outputToSocket.println(MyContacts.get(id-1));
                     }
                     break;
                 }
@@ -242,7 +257,6 @@ public class ChatClient {
             String TERMINATOR_STRING = "#send";
             System.out.println("enter the message: (press " + TERMINATOR_STRING + " to send)");
             StringBuilder message = new StringBuilder();
-            ;
             String str;
             while (!(str = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
                 message.append(str);
@@ -263,7 +277,12 @@ public class ChatClient {
         if (AESEncryption.verifyPlainText(message)) {
             int messagesNumber = Integer.parseInt(message);
             for (int i = 0; i < messagesNumber; i++) {
-                System.out.println(RSAEncryption.decrypt(decryptFromServer(), privateKey));
+                String response = decryptFromServer();
+                String[] messageInfo = response.split(", msg: ");
+                System.out.println(messageInfo[0]);
+                String[] msg = messageInfo[1].split(",");
+                System.out.println(RSAEncryption.decrypt(msg[0], privateKey));
+                System.out.println(msg[1]);
             }
         }
     }
@@ -283,8 +302,7 @@ public class ChatClient {
                 isLoggedIn = false;
                 getMessagesServerSocket.close();
                 this.interrupt();
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception ignored) {
             }
         }
 
@@ -296,11 +314,14 @@ public class ChatClient {
                     Socket getMessagesSocket = getMessagesServerSocket.accept();
                     Scanner inputFromOtherSocket = new Scanner(getMessagesSocket.getInputStream());
                     if (inputFromOtherSocket.hasNextLine()) {
-                        System.out.println(decryptFromServer(inputFromOtherSocket));
+
+                        String response = decryptFromServer(inputFromOtherSocket);
+                        String[] messageInfo = response.split(", content: ");
+                        System.out.println(messageInfo[0]);
+                        System.out.println(RSAEncryption.decrypt(messageInfo[1].replace(ANSI_RESET,""),privateKey) + ANSI_RESET);
                     }
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception ignored) {
             }
         }
     }
@@ -367,10 +388,80 @@ public class ChatClient {
     }
 
     private void initializeKeys() {
+
         RSAEncryption.init(USER_PUBLIC_KEY_PATH(myPhoneNumber), USER_PRIVATE_KEY_PATH(myPhoneNumber));
         publicKey = (PublicKey) RSAEncryption.getPublicKey(USER_PUBLIC_KEY_PATH(myPhoneNumber));
         privateKey = (PrivateKey) RSAEncryption.getPublicKey(USER_PRIVATE_KEY_PATH(myPhoneNumber));
-        encryptToServer(Base64.getEncoder().encodeToString(publicKey.getEncoded()));
+        try {
+            assert publicKey != null : INIT_SERVER_PUBLIC_ERROR_MESSAGE;
+            assert privateKey != null : INIT_SERVER_PRIVATE_ERROR_MESSAGE;
+
+        } catch (AssertionError error) {
+            System.out.println(error.getMessage());
+        }
+    }
+
+    private void initCertificateAndSendToServer() {
+        try {
+            ObjectOutputStream objectOutputToSocket = null;
+            Certificate certificate = Certificate.retrieveFromFile(CLIENT_CERTIFICATE_PATH(myPhoneNumber));
+            System.out.println("objectOutputToSocket in initializeKeys is initialized");
+            objectOutputToSocket = new ObjectOutputStream(socket.getOutputStream());
+            objectOutputToSocket.flush();
+            objectOutputToSocket.writeObject(certificate);
+        } catch (IOException e) {
+            System.out.println("certificate is not created yet :)");
+        }
+    }
+
+    private void ensureCertificateExistenceOrSendCSR() {
+        try {
+            Certificate.initCertificate(CLIENT_CERTIFICATE_PATH(myPhoneNumber));
+        } catch (IOException ioException) {
+            System.out.println("Cannot reach file " + ioException.getMessage());
+            System.out.println("making a new CSR");
+            try {
+                //initializing ca server connection
+                InetAddress ip = InetAddress.getLocalHost();
+                Socket CASocket = new Socket(ip, 22222);
+                //initializing input&output streams
+                //Scanner inputFromSocket = new Scanner(CASocket.getInputStream());
+                //PrintWriter outputToSocket = new PrintWriter(CASocket.getOutputStream(), true);
+                ObjectOutputStream objectOutputToSocket = new ObjectOutputStream(CASocket.getOutputStream());
+                ObjectInputStream objectInputFromSocket = new ObjectInputStream(CASocket.getInputStream());
+                //send request of
+                objectOutputToSocket.writeObject(CLIENT_CSR_MESSAGE);
+                //making CSR object
+                String subject = myPhoneNumber;
+                PublicKey clientPublicKey = (PublicKey) RSAEncryption.getPublicKey(USER_PUBLIC_KEY_PATH(myPhoneNumber));
+                CSR clientCSR = new CSR(subject, clientPublicKey);
+                System.out.println("objectOutputToSocket in clientCSR is initialized");
+                //send CSR object through socket
+                objectOutputToSocket.flush();
+                objectOutputToSocket.writeObject(clientCSR);
+                //outputToSocket.println(myPhoneNumber);
+                //receive CA response
+                String response = (String) objectInputFromSocket.readObject();
+                //String response = inputFromSocket.nextLine();
+                if (response.equals("approved")) {
+                    //clientGetMessages.subjectVerify = true;
+                    Certificate certificate = (Certificate) objectInputFromSocket.readObject();
+                    //check signature of certificate
+                    if (DigitalSignature.verifyDigitalSignature(certificate.getBase64EncodedCertificateBody(), certificate.caSignature, CAPublicKey)) {
+                        certificate.storeToFile(CLIENT_CERTIFICATE_PATH(myPhoneNumber));
+                        System.out.println("certificate is created");
+                    } else {
+                        throw new IllegalCertificateException();
+                    }
+                } else {
+                    throw new UnproccessableCSRException();
+                }
+                CASocket.close();
+            } catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+
+        }
     }
 
     public static void main(String[] args) {
