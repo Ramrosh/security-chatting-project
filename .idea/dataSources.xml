@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="chat-app@localhost" uuid="39d41c30-f59f-4e4e-bf78-9ab3cb9dc526">
+    <data-source source="LOCAL" name="chat-app-fourth-fifth-stage@localhost" uuid="39d41c30-f59f-4e4e-bf78-9ab3cb9dc526">
       <driver-ref>mariadb</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.mariadb.jdbc.Driver</jdbc-driver>
-      <jdbc-url>jdbc:mariadb://localhost:3306/chat-app</jdbc-url>
+      <jdbc-url>jdbc:mariadb://localhost:3306/chat-app-fourth-fifth-stage</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
   </component>

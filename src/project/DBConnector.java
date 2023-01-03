@@ -13,7 +13,7 @@ public class DBConnector {
     }
 
     public static Connection connect() {
-        String MySQLURL = "jdbc:mysql://127.0.0.1:3306/chat-app";
+        String MySQLURL = "jdbc:mysql://127.0.0.1:3306/chat-app-fourth-fifth-stage";
         String databaseUserName = "root";
         String databasePassword = "";
         Connection connection = null;

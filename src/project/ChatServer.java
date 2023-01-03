@@ -7,6 +7,7 @@ import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -323,10 +324,17 @@ public class ChatServer implements Runnable {
         }
     }
 
-    public void initializeUserPublicKey() {
+    public void initializeUserPublicKey(String phoneNumber) {
         try {
-            userPublicKey = KeyFactory.getInstance(RSA).generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(decryptFromClient()))); // TODO check if decrypted message is not correct
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+            ObjectInputStream objectFromSocket=new ObjectInputStream(socket.getInputStream());
+            Certificate userCertificate=(Certificate) objectFromSocket.readObject();
+            boolean isValid=Certificate.verifyCertificate(userCertificate,phoneNumber);
+            if(isValid){
+                userPublicKey = userCertificate.subjectPublicKey ;
+            }else{
+                System.out.println("invalid certificate");
+            }
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -336,7 +344,7 @@ public class ChatServer implements Runnable {
         String sessionKeySuccessOrErrorMessage = DBConnector.setUserSecretKey(phoneNumber, sessionKey);
         // if session key stored successfully initialize user public key
         if (!sessionKeySuccessOrErrorMessage.contains("error")) {
-            initializeUserPublicKey();
+            initializeUserPublicKey(phoneNumber);
             // store the public key in DB
             String publicKeySuccessOrErrorMessage = DBConnector.setUserPublicKey(phoneNumber, Base64.getEncoder().encodeToString(publicKey.getEncoded()));
             // if public key stored successfully

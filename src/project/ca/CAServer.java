@@ -31,8 +31,8 @@ public class CAServer {
     }
     private static class CAServerThread implements Runnable {
         Socket socket;
-        private Scanner inputFromSocket;
-        private PrintWriter outputToSocket;
+        //private Scanner inputFromSocket;
+        //private PrintWriter outputToSocket;
         private ObjectOutputStream objectOutputToSocket;
         private ObjectInputStream objectInputFromSocket;
 
@@ -44,12 +44,13 @@ public class CAServer {
         public void run() {
             System.out.println("Connected: " + socket);
             try {
-                this.inputFromSocket = new Scanner(socket.getInputStream());//input from client
-                this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
+                //this.inputFromSocket = new Scanner(socket.getInputStream());//input from client
+                //this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
                 this.objectOutputToSocket = new ObjectOutputStream(socket.getOutputStream());
                 this.objectInputFromSocket=new ObjectInputStream(socket.getInputStream());
-                while (inputFromSocket.hasNextLine()) {
-                    String clientRequestChoice = inputFromSocket.nextLine();
+                //while (inputFromSocket.hasNextLine()) {
+                    //String clientRequestChoice = inputFromSocket.nextLine();
+                    String clientRequestChoice = (String) objectInputFromSocket.readObject();
                     switch (clientRequestChoice) {
                         case SERVER_CSR_MESSAGE:{
                             System.out.println("got a server CSR");
@@ -64,14 +65,14 @@ public class CAServer {
                             break;
                         }
                     }
-                }
+               // }
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println("Error:" + socket);
             } finally {
                 try {
-                    inputFromSocket.close();
-                    outputToSocket.close();
+                   // inputFromSocket.close();
+                   // outputToSocket.close();
                     socket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -85,7 +86,8 @@ public class CAServer {
                 CSR receivedCSR=(CSR)objectInputFromSocket.readObject();
                 //start verification
                 if (verifyServerSubject(receivedCSR)) {
-                    outputToSocket.println("approved");
+                    //outputToSocket.println("approved");
+                    objectOutputToSocket.writeObject("approved");
                     //create the certificate and sign its body
                     Certificate serverCertificate=new Certificate(receivedCSR.subject,receivedCSR.subjectPublicKey);
                     String bodyToBeSigned=serverCertificate.getBase64EncodedCertificateBody();
@@ -93,7 +95,8 @@ public class CAServer {
                     serverCertificate.setCaSignature(signature);
                     objectOutputToSocket.writeObject(serverCertificate);
                 } else {
-                    outputToSocket.println("rejected");
+                   // outputToSocket.println("rejected");
+                    objectOutputToSocket.writeObject("rejected");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -134,6 +137,38 @@ public class CAServer {
             return s.toString();
         }
 
-        private void handleClientCSR(){}
+        private void handleClientCSR(){
+            try {
+                //inputFromSocket
+                System.out.println("***requested CSR***");
+                CSR receivedCSR=(CSR)objectInputFromSocket.readObject();
+                //start verification
+                if (verifyClientSubject(receivedCSR)) {
+                    objectOutputToSocket.writeObject("approved");
+                    //create the certificate and sign its body
+                    Certificate clientCertificate=new Certificate(receivedCSR.subject,receivedCSR.subjectPublicKey);
+                    String bodyToBeSigned=clientCertificate.getBase64EncodedCertificateBody();
+                    String signature= DigitalSignature.createDigitalSignature(bodyToBeSigned,(PrivateKey) RSAEncryption.getPrivateKey(CA_PRIVATE_KEY_FILE));
+                    clientCertificate.setCaSignature(signature);
+                    objectOutputToSocket.writeObject(clientCertificate);
+                } else {
+                    objectOutputToSocket.writeObject("rejected");
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private boolean verifyClientSubject(CSR receivedCSR){
+            try{
+                System.out.println("verifying");
+                //String clientPhoneNum=inputFromSocket.nextLine();
+                //return clientPhoneNum.equals(receivedCSR.subject);
+                return true;
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            return false;
+        }
     }
 }
