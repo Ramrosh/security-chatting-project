@@ -3,12 +3,12 @@ package project;
 import project.cryptography.asymmetric.DigitalSignature;
 import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
+import project.utils.LogFileManager;
 
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.Key;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -25,7 +25,7 @@ public class ChatClient {
     //attributes
     boolean isLoggedIn;
 
-    private static String myPhoneNumber;
+    private String myPhoneNumber;
     //input&output streams
     private Scanner inputFromSocket;
     private PrintWriter outputToSocket;
@@ -235,7 +235,8 @@ public class ChatClient {
         if (!hasError) {
             String TERMINATOR_STRING = "#send";
             System.out.println("enter the message: (press " + TERMINATOR_STRING + " to send)");
-            StringBuilder message = new StringBuilder();;
+            StringBuilder message = new StringBuilder();
+            ;
             String str;
             while (!(str = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
                 message.append(str);
@@ -320,7 +321,9 @@ public class ChatClient {
         String mac = inputFromSocket.nextLine();
         String signature = inputFromSocket.nextLine();
         if (DigitalSignature.verifyDigitalSignature(messageReceived, signature, serverPublicKey)) {
-            return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+            String response = AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+            LogFileManager.writeToFile(myPhoneNumber, response, signature);
+            return response;
         } else {
             return VERIFY_DIGITAL_SIGNATURE_ERROR_MESSAGE;
         }
@@ -332,7 +335,9 @@ public class ChatClient {
         String mac = inputFromOtherSocket.nextLine();
         String signature = inputFromOtherSocket.nextLine();
         if (DigitalSignature.verifyDigitalSignature(messageReceived, signature, serverPublicKey)) {
-            return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+            String response = AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+            LogFileManager.writeToFile(myPhoneNumber, response, signature);
+            return response;
         } else {
             return VERIFY_DIGITAL_SIGNATURE_ERROR_MESSAGE;
         }

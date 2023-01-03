@@ -79,9 +79,9 @@ public class DBConnector {
         }
     }
 
-    private static String updateUserSecretKey(@NotNull String phoneNumber, @NotNull String value) {
+    private static String updateUser(@NotNull String phoneNumber, @NotNull String certainColumn, @NotNull String value) {
         Connection connection = connect();
-        String updateSQL = "UPDATE users SET secret_key = ? where phone_number = ?";
+        String updateSQL = "UPDATE users SET " + certainColumn + "= ? where phone_number = ?";
 
         try {
             assert connection != null : "connection error";
@@ -98,27 +98,6 @@ public class DBConnector {
         }
         return "Updated successfully = " + phoneNumber + " " + value;
     }
-
-    private static String updateUserPublicKey(@NotNull String phoneNumber, @NotNull String value) {
-        Connection connection = connect();
-        String updateSQL = "UPDATE users SET public_key = ? where phone_number = ?";
-
-        try {
-            assert connection != null : "connection error";
-            assert (phoneNumber.length() <= 10 && phoneNumber.matches("\\d+")) : "invalid input";
-            PreparedStatement preparedStatement = connection.prepareStatement(updateSQL);
-            preparedStatement.setString(1, value);
-            preparedStatement.setString(2, phoneNumber);
-            System.out.println(preparedStatement);
-            int affectedRows = preparedStatement.executeUpdate();
-            assert affectedRows > 0 : "error while inserting";
-        } catch (SQLException | AssertionError exception) {
-            exception.printStackTrace();
-            return "sql error : " + exception.getMessage();
-        }
-        return "Updated successfully = " + phoneNumber + " " + value;
-    }
-
 
     /************************************ Contact ***********************************/
     private static String findContact(String adderNumber, String addedNumber) {
@@ -126,16 +105,14 @@ public class DBConnector {
         String findSQL = "Select * from contacts where adder_phone_number = ? and added_phone_number = ?";
         try {
             assert connection != null : "connection error";
-            assert (adderNumber.length() <= 10 && addedNumber.length() <= 10 &&
-                    adderNumber.matches("\\d+") && addedNumber.matches("\\d+")) : "invalid input";
+            assert (adderNumber.length() <= 10 && addedNumber.length() <= 10 && adderNumber.matches("\\d+") && addedNumber.matches("\\d+")) : "invalid input";
             PreparedStatement preparedStatement = connection.prepareStatement(findSQL);
             preparedStatement.setString(1, adderNumber);
             preparedStatement.setString(2, addedNumber);
             ResultSet contact = preparedStatement.executeQuery();
             if (contact.next())//if there is a contact + moving result cursor to read result
             {
-                return "adder: " + contact.getString("adder_phone_number") + " , " +
-                        "added: " + contact.getString("added_phone_number");
+                return "adder: " + contact.getString("adder_phone_number") + " , " + "added: " + contact.getString("added_phone_number");
             } else //case the contact doesn't exist
             {
                 return "error: the added number not exist in the adder contact";
@@ -151,8 +128,7 @@ public class DBConnector {
         String insertSQL = "INSERT INTO contacts (adder_phone_number, added_phone_number) VALUES (?, ?)";
         try {
             assert connection != null : "connection error";
-            assert ((adderNumber.length() <= 10) && (addedNumber.length() <= 10) &&
-                    adderNumber.matches("\\d+") && addedNumber.matches("\\d+")) : "invalid input";
+            assert ((adderNumber.length() <= 10) && (addedNumber.length() <= 10) && adderNumber.matches("\\d+") && addedNumber.matches("\\d+")) : "invalid input";
             PreparedStatement preparedStatement = connection.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS);
             preparedStatement.setString(1, adderNumber);
             preparedStatement.setString(2, addedNumber);
@@ -203,8 +179,7 @@ public class DBConnector {
         String insertSQL = "INSERT INTO messages (content, sender_phone_number, receiver_phone_number,signature) VALUES (?, ?, ?,?)";
         try {
             assert connection != null : "connection error";
-            assert ((senderPhoneNumber.length() <= 10) && (receiverNumber.length() <= 10) &&
-                    senderPhoneNumber.matches("\\d+") && receiverNumber.matches("\\d+")) : "invalid input";
+            assert ((senderPhoneNumber.length() <= 10) && (receiverNumber.length() <= 10) && senderPhoneNumber.matches("\\d+") && receiverNumber.matches("\\d+")) : "invalid input";
             PreparedStatement preparedStatement = connection.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS);
             preparedStatement.setString(1, message);
             preparedStatement.setString(2, senderPhoneNumber);
@@ -277,12 +252,12 @@ public class DBConnector {
     }
 
     public static String setUserSecretKey(String phoneNumber, String secretKey) {
-        return updateUserSecretKey(phoneNumber, secretKey);
+        return updateUser(phoneNumber, "secret_key", secretKey);
     }
 
 
     public static String setUserPublicKey(String phoneNumber, String publicKey) {
-        return updateUserPublicKey(phoneNumber, publicKey);
+        return updateUser(phoneNumber, "public_key", publicKey);
     }
 
     public static String addingContact(String adderNumber, String addedNumber) {
