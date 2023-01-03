@@ -79,9 +79,10 @@ public class DBConnector {
         }
     }
 
-    private static String updateUserSecretKey(@NotNull String phoneNumber, @NotNull String value) {
+
+    private static String updateUser(@NotNull String phoneNumber, @NotNull String certainColumn, @NotNull String value) {
         Connection connection = connect();
-        String updateSQL = "UPDATE users SET secret_key = ? where phone_number = ?";
+        String updateSQL = "UPDATE users SET " + certainColumn + "= ? where phone_number = ?";
 
         try {
             assert connection != null : "connection error";
@@ -98,7 +99,6 @@ public class DBConnector {
         }
         return "Updated successfully = " + phoneNumber + " " + value;
     }
-
     /************************************ Contact ***********************************/
     private static String findContact(String adderNumber, String addedNumber) {
         Connection connection = connect();
@@ -254,7 +254,7 @@ public class DBConnector {
     }
 
     public static String setUserSecretKey(String phoneNumber, String secretKey) {
-        return updateUserSecretKey(phoneNumber, secretKey);
+        return updateUser(phoneNumber,"secret_key", secretKey);
     }
 
     public static String addingContact(String adderNumber, String addedNumber) {
