@@ -25,7 +25,7 @@ public class ChatClient {
     //attributes
     boolean isLoggedIn;
 
-    private static String myPhoneNumber;
+    private String myPhoneNumber;
     //input&output streams
     private Scanner inputFromSocket;
     private PrintWriter outputToSocket;
