@@ -65,9 +65,17 @@ public class Constants {
 
     public static String KEY_FOLDER_PATH = PROJECT_FOLDER_PATH + "/src/project/keys/";
 
+    public static String LOG_FOLDER_PATH = PROJECT_FOLDER_PATH + "/src/project/logs/";
+
     public static String REQUEST_PUBLIC_KEY_MESSAGE = "Can I have your public key?";
 
     public static final String SESSION_KEY_ACCEPTED = "The Session key accepted";
+
+    public static final String LOG_FILE_DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
+
+    public static String USER_LOG_FILE_PATH(String phoneNumber) {
+        return LOG_FOLDER_PATH +  phoneNumber + "_log.txt";
+    }
 
     public static String USER_PUBLIC_KEY_PATH(String phoneNumber) {
         return phoneNumber + "_public.key";
