@@ -314,7 +314,7 @@ public class ChatServer implements Runnable {
         if (!sessionKeySuccessOrErrorMessage.contains("error")) {
             initializeUserPublicKey();
             // store the public key in DB
-            String publicKeySuccessOrErrorMessage = DBConnector.setUserPublicKey(phoneNumber, Base64.getEncoder().encodeToString(publicKey.getEncoded()));
+            String publicKeySuccessOrErrorMessage = DBConnector.setUserPublicKey(phoneNumber, Base64.getEncoder().encodeToString(userPublicKey.getEncoded()));
             // if public key stored successfully
             if (!publicKeySuccessOrErrorMessage.contains("error")) {
                 PortIdCollection.portIDPairs.add(new PortIDPair(socket.getPort(), phoneNumber));

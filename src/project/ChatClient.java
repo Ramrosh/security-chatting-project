@@ -127,7 +127,7 @@ public class ChatClient {
                 }
             } while (true);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println(e.getMessage());
         }
     }
 
@@ -234,11 +234,11 @@ public class ChatClient {
         }
         if (!hasError) {
             String TERMINATOR_STRING = "#send";
-            System.out.println("enter the message: (press " + TERMINATOR_STRING + " to send)");
+            System.out.println("enter the message: (press enter to send)");
             StringBuilder message = new StringBuilder();
             ;
             String str;
-            while (!(str = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
+            if (!(str = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
                 message.append(str);
             }
             encryptToServer(message.toString());
@@ -269,7 +269,7 @@ public class ChatClient {
     //util methods
 
     private class ClientGetMessages extends Thread {
-        static ServerSocket getMessagesServerSocket;
+        ServerSocket getMessagesServerSocket;
 
         public void stopGetMessages() {
             try {
@@ -293,7 +293,6 @@ public class ChatClient {
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
