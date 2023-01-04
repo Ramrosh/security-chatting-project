@@ -277,14 +277,17 @@ public class ChatClient {
         String message = decryptFromServer();
         if (AESEncryption.verifyPlainText(message)) {
             int messagesNumber = Integer.parseInt(message);
-            for (int i = 0; i < messagesNumber; i++) {
-                String response = decryptFromServer();
-                String[] messageInfo = response.split(", msg: ");
-                System.out.println(messageInfo[0]);
-                String[] msg = messageInfo[1].split(",");
-                System.out.println(RSAEncryption.decrypt(msg[0], privateKey));
-                System.out.println(msg[1]);
-            }
+                for (int i = 0; i < messagesNumber; i++) {
+                    try{
+                        String response = decryptFromServer();
+                        String[] messageInfo = response.split(", msg: ");
+                        System.out.println(messageInfo[0]);
+                        String[] msg = messageInfo[1].split(",");
+                        System.out.println(RSAEncryption.decrypt(msg[0], privateKey));
+                        System.out.println(msg[1]);
+                    }catch (ArrayIndexOutOfBoundsException ignored){
+                    }
+                }
         }
     }
 
@@ -410,7 +413,6 @@ public class ChatClient {
         try {
             ObjectOutputStream objectOutputToSocket = null;
             Certificate certificate = Certificate.retrieveFromFile(CLIENT_CERTIFICATE_PATH(myPhoneNumber));
-            System.out.println("objectOutputToSocket in initializeKeys is initialized");
             objectOutputToSocket = new ObjectOutputStream(socket.getOutputStream());
             objectOutputToSocket.flush();
             objectOutputToSocket.writeObject(certificate);
@@ -430,26 +432,24 @@ public class ChatClient {
                 InetAddress ip = InetAddress.getLocalHost();
                 Socket CASocket = new Socket(ip, 22222);
                 //initializing input&output streams
-                //Scanner inputFromSocket = new Scanner(CASocket.getInputStream());
-                //PrintWriter outputToSocket = new PrintWriter(CASocket.getOutputStream(), true);
                 ObjectOutputStream objectOutputToSocket = new ObjectOutputStream(CASocket.getOutputStream());
                 ObjectInputStream objectInputFromSocket = new ObjectInputStream(CASocket.getInputStream());
                 //send request of
                 objectOutputToSocket.writeObject(CLIENT_CSR_MESSAGE);
                 //making CSR object
                 String subject = myPhoneNumber;
-                PublicKey clientPublicKey = (PublicKey) RSAEncryption.getPublicKey(USER_PUBLIC_KEY_PATH(myPhoneNumber));
+                PublicKey clientPublicKey = this.publicKey;
+                PrivateKey clientPrivateKey=this.privateKey;
                 CSR clientCSR = new CSR(subject, clientPublicKey);
-                System.out.println("objectOutputToSocket in clientCSR is initialized");
+                //sign the public key provided in CSR by the same pair's private key
+                clientCSR.signCSRPublicKey(clientPrivateKey);
+                System.out.println("sending client CSR to CA .....");
                 //send CSR object through socket
                 objectOutputToSocket.flush();
                 objectOutputToSocket.writeObject(clientCSR);
-                //outputToSocket.println(myPhoneNumber);
                 //receive CA response
                 String response = (String) objectInputFromSocket.readObject();
-                //String response = inputFromSocket.nextLine();
                 if (response.equals("approved")) {
-                    //clientGetMessages.subjectVerify = true;
                     Certificate certificate = (Certificate) objectInputFromSocket.readObject();
                     //check signature of certificate
                     if (DigitalSignature.verifyDigitalSignature(certificate.getBase64EncodedCertificateBody(), certificate.caSignature, CAPublicKey)) {

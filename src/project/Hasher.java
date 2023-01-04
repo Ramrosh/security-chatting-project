@@ -12,6 +12,8 @@ import java.util.regex.Pattern;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
+import static project.utils.Constants.*;
+
 
 public final class Hasher
 {
@@ -25,8 +27,6 @@ public final class Hasher
      * The minimum recommended cost, used by default
      */
     public static final int DEFAULT_COST = 16;
-
-    private static final String ALGORITHM = "PBKDF2WithHmacSHA1";
 
     private static final int SIZE = 128;
 
@@ -100,11 +100,11 @@ public final class Hasher
     {
         KeySpec spec = new PBEKeySpec(password, salt, iterations, SIZE);
         try {
-            SecretKeyFactory f = SecretKeyFactory.getInstance(ALGORITHM);
+            SecretKeyFactory f = SecretKeyFactory.getInstance(PASSWORD_HASHING_ALGORITHM);
             return f.generateSecret(spec).getEncoded();
         }
         catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("Missing algorithm: " + ALGORITHM, ex);
+            throw new IllegalStateException("Missing algorithm: " + PASSWORD_HASHING_ALGORITHM, ex);
         }
         catch (InvalidKeySpecException ex) {
             throw new IllegalStateException("Invalid SecretKeyFactory", ex);

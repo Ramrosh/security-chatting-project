@@ -31,8 +31,6 @@ public class CAServer {
     }
     private static class CAServerThread implements Runnable {
         Socket socket;
-        //private Scanner inputFromSocket;
-        //private PrintWriter outputToSocket;
         private ObjectOutputStream objectOutputToSocket;
         private ObjectInputStream objectInputFromSocket;
 
@@ -44,35 +42,28 @@ public class CAServer {
         public void run() {
             System.out.println("Connected: " + socket);
             try {
-                //this.inputFromSocket = new Scanner(socket.getInputStream());//input from client
-                //this.outputToSocket = new PrintWriter(socket.getOutputStream(), true);//output to client
                 this.objectOutputToSocket = new ObjectOutputStream(socket.getOutputStream());
                 this.objectInputFromSocket=new ObjectInputStream(socket.getInputStream());
-                //while (inputFromSocket.hasNextLine()) {
-                    //String clientRequestChoice = inputFromSocket.nextLine();
-                    String clientRequestChoice = (String) objectInputFromSocket.readObject();
-                    switch (clientRequestChoice) {
-                        case SERVER_CSR_MESSAGE:{
-                            System.out.println("got a server CSR");
-                            this.handleServerCSR();
-                            break;
-                        }
-                        case CLIENT_CSR_MESSAGE: {
-                           this.handleClientCSR();
-                            break;
-                        }
-                        default: {
-                            break;
-                        }
+                String clientRequestChoice = (String) objectInputFromSocket.readObject();
+                switch (clientRequestChoice) {
+                    case SERVER_CSR_MESSAGE:{
+                        System.out.println("got a server CSR");
+                        this.handleServerCSR();
+                        break;
                     }
-               // }
+                    case CLIENT_CSR_MESSAGE: {
+                       this.handleClientCSR();
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println("Error:" + socket);
             } finally {
                 try {
-                   // inputFromSocket.close();
-                   // outputToSocket.close();
                     socket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -84,9 +75,8 @@ public class CAServer {
         private void handleServerCSR(){
             try {
                 CSR receivedCSR=(CSR)objectInputFromSocket.readObject();
-                //start verification
-                if (verifyServerSubject(receivedCSR)) {
-                    //outputToSocket.println("approved");
+                //start verification: verify the CSR signature then verify the subject
+                if (verifyCSRSignature(receivedCSR) && verifyServerSubject(receivedCSR)) {
                     objectOutputToSocket.writeObject("approved");
                     //create the certificate and sign its body
                     Certificate serverCertificate=new Certificate(receivedCSR.subject,receivedCSR.subjectPublicKey);
@@ -95,7 +85,6 @@ public class CAServer {
                     serverCertificate.setCaSignature(signature);
                     objectOutputToSocket.writeObject(serverCertificate);
                 } else {
-                   // outputToSocket.println("rejected");
                     objectOutputToSocket.writeObject("rejected");
                 }
             } catch (IOException e) {
@@ -115,7 +104,9 @@ public class CAServer {
                 String randomVerificationCode=randomGeneratedStr(10);
                 outputToSocket.println(randomVerificationCode);
                 String receivedCode=inputFromSocket.nextLine();
-                return receivedCode.equals(randomVerificationCode);
+                boolean codeIsValid=receivedCode.contains(randomVerificationCode);
+                System.out.println("code input= "+ receivedCode + " result is=" +codeIsValid);
+                return codeIsValid;
 
             }catch (Exception e){
                 e.printStackTrace();
@@ -143,7 +134,7 @@ public class CAServer {
                 System.out.println("***requested CSR***");
                 CSR receivedCSR=(CSR)objectInputFromSocket.readObject();
                 //start verification
-                if (verifyClientSubject(receivedCSR)) {
+                if (verifyCSRSignature(receivedCSR)&&verifyClientSubject(receivedCSR)) {
                     objectOutputToSocket.writeObject("approved");
                     //create the certificate and sign its body
                     Certificate clientCertificate=new Certificate(receivedCSR.subject,receivedCSR.subjectPublicKey);
@@ -158,7 +149,6 @@ public class CAServer {
                 throw new RuntimeException(e);
             }
         }
-
         private boolean verifyClientSubject(CSR receivedCSR){
             try{
                 System.out.println("verifying");
@@ -169,6 +159,12 @@ public class CAServer {
                 e.printStackTrace();
             }
             return false;
+        }
+
+        private  boolean verifyCSRSignature(CSR receivedCSR){
+            boolean signatureValid = DigitalSignature.verifyDigitalSignature(receivedCSR.getPublicKeySignatureInBase64Encoding(), receivedCSR.publicKeySignature, receivedCSR.subjectPublicKey);
+            System.out.println(" verifying signature : "+signatureValid);
+            return signatureValid;
         }
     }
 }

@@ -8,6 +8,8 @@ public class Constants {
 
     public static int GCM_TAG_LENGTH = 16;
 
+    public static final String PASSWORD_HASHING_ALGORITHM = "PBKDF2WithHmacSHA1";
+
     public static String AES = "AES";
 
     public static String AES_CIPHER_ALGORITHM = "AES/GCM/NoPadding";
@@ -19,6 +21,8 @@ public class Constants {
     public static final String RSA = "RSA";
 
     public static final String RSA_CIPHER_ALGORITHM = "RSA/ECB/OAEPWITHSHA-512ANDMGF1PADDING";
+
+    public static String SIGNING_ALGORITHM = "SHA256withRSA";
 
     /*************************** Error Messages ***************************/
 
@@ -52,16 +56,14 @@ public class Constants {
 
     /*************************** Others ***************************/
 
-    // Rana: C:/Users/ASUS/Desktop/securiity-project/security-chatting-project
+    // Rana: C:/Users/ASUS/Desktop/security-project/security-chatting-project  
     // Rama: F:/Programming/Java/security_chatting_project/fifth_stage_v1/fifth_stage
     // Ahmad: E:/iss/security-chatting-project
     // Hamza: C:/Users/Hamza/Desktop/security-chatting-project
     // FIXME Change this path to your own project path
-    public static String PROJECT_FOLDER_PATH = "C:/Users/Hamza/Desktop/security-chatting-project";
+    public static String PROJECT_FOLDER_PATH = "C:/Users/ASUS/Desktop/security-project/security-chatting-project";
 
     public static String SERVER_PUBLIC_KEY_FILE = "public.key";
-
-    public static String SIGNING_ALGORITHM = "SHA256withRSA";
 
     public static String SERVER_PRIVATE_KEY_FILE = "private.key";
 

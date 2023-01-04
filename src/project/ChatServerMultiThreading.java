@@ -58,7 +58,10 @@ public class ChatServerMultiThreading {
                     //making CSR object
                     String subject = String.valueOf(port);
                     PublicKey serverPublicKey = (PublicKey) RSAEncryption.getPublicKey(SERVER_PUBLIC_KEY_FILE);
+                    PrivateKey serverPrivateKey=(PrivateKey)RSAEncryption.getPrivateKey(SERVER_PRIVATE_KEY_FILE);
                     CSR serverCSR = new CSR(subject, serverPublicKey);
+                    //sign the public key provided in CSR by the same pair's private key
+                    serverCSR.signCSRPublicKey(serverPrivateKey);
                     //send CSR object through socket
                     objectOutputToSocket.writeObject(serverCSR);
                     //receive CA response
