@@ -52,8 +52,12 @@ public class Constants {
 
     /*************************** Others ***************************/
 
+    // Rana: C:/Users/ASUS/Desktop/securiity-project/security-chatting-project
+    // Rama: F:/Programming/Java/security_chatting_project/fifth_stage_v1/fifth_stage
+    // Ahmad: E:/iss/security-chatting-project
+    // Hamza: C:/Users/Hamza/Desktop/security-chatting-project
     // FIXME Change this path to your own project path
-    public static String PROJECT_FOLDER_PATH = "E:/iss/security-chatting-project";
+    public static String PROJECT_FOLDER_PATH = "C:/Users/Hamza/Desktop/security-chatting-project";
 
     public static String SERVER_PUBLIC_KEY_FILE = "public.key";
 
@@ -62,6 +66,8 @@ public class Constants {
     public static String SERVER_PRIVATE_KEY_FILE = "private.key";
 
     public static String KEY_FOLDER_PATH = PROJECT_FOLDER_PATH + "/src/project/keys/";
+
+    public static String LOG_FOLDER_PATH = PROJECT_FOLDER_PATH + "/src/project/logs/";
 
     public static String CERTIFICATE_FOLDER_PATH = PROJECT_FOLDER_PATH + "/src/project/certificates/";
 
@@ -80,6 +86,12 @@ public class Constants {
     public static String CA_PRIVATE_KEY_FILE = "ca_private.key";
 
     public static String SERVER_CERTIFICATE_FILE = "certificate.cer";
+
+    public static final String LOG_FILE_DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
+
+    public static String USER_LOG_FILE_PATH(String phoneNumber) {
+        return LOG_FOLDER_PATH +  phoneNumber + "_log.txt";
+    }
 
     public static String USER_PUBLIC_KEY_PATH(String phoneNumber) {
         return phoneNumber + "_public.key";

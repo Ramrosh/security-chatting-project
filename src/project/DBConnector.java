@@ -79,29 +79,9 @@ public class DBConnector {
         }
     }
 
-    private static String updateUserSecretKey(@NotNull String phoneNumber, @NotNull String value) {
+    private static String updateUser(@NotNull String phoneNumber, @NotNull String certainColumn, @NotNull String value) {
         Connection connection = connect();
-        String updateSQL = "UPDATE users SET secret_key = ? where phone_number = ?";
-
-        try {
-            assert connection != null : "connection error";
-            assert (phoneNumber.length() <= 10 && phoneNumber.matches("\\d+")) : "invalid input";
-            PreparedStatement preparedStatement = connection.prepareStatement(updateSQL);
-            preparedStatement.setString(1, value);
-            preparedStatement.setString(2, phoneNumber);
-            System.out.println(preparedStatement);
-            int affectedRows = preparedStatement.executeUpdate();
-            assert affectedRows > 0 : "error while inserting";
-        } catch (SQLException | AssertionError exception) {
-            exception.printStackTrace();
-            return "sql error : " + exception.getMessage();
-        }
-        return "Updated successfully = " + phoneNumber + " " + value;
-    }
-
-    private static String updateUserPublicKey(@NotNull String phoneNumber, @NotNull String value) {
-        Connection connection = connect();
-        String updateSQL = "UPDATE users SET public_key = ? where phone_number = ?";
+        String updateSQL = "UPDATE users SET " + certainColumn + "= ? where phone_number = ?";
 
         try {
             assert connection != null : "connection error";
@@ -278,12 +258,12 @@ public class DBConnector {
 
 
     public static String setUserSecretKey(String phoneNumber, String secretKey) {
-        return updateUserSecretKey(phoneNumber, secretKey);
+        return updateUser(phoneNumber, "secret_key", secretKey);
     }
 
 
     public static String setUserPublicKey(String phoneNumber, String publicKey) {
-        return updateUserPublicKey(phoneNumber, publicKey);
+        return updateUser(phoneNumber, "public_key", publicKey);
     }
 
     public static String addingContact(String adderNumber, String addedNumber) {

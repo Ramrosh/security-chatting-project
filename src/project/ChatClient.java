@@ -7,6 +7,7 @@ import project.ca.exceptions.UnproccessableCSRException;
 import project.cryptography.asymmetric.DigitalSignature;
 import project.cryptography.asymmetric.RSAEncryption;
 import project.cryptography.symmetric.AESEncryption;
+import project.utils.LogFileManager;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -349,7 +350,9 @@ public class ChatClient {
         String mac = inputFromSocket.nextLine();
         String signature = inputFromSocket.nextLine();
         if (DigitalSignature.verifyDigitalSignature(messageReceived, signature, serverPublicKey)) {
-            return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+            String response = AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+            LogFileManager.writeToFile(myPhoneNumber, response, signature);
+            return response;
         } else {
             return VERIFY_DIGITAL_SIGNATURE_ERROR_MESSAGE;
         }
@@ -361,7 +364,9 @@ public class ChatClient {
         String mac = inputFromOtherSocket.nextLine();
         String signature = inputFromOtherSocket.nextLine();
         if (DigitalSignature.verifyDigitalSignature(messageReceived, signature, serverPublicKey)) {
-            return AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+            String response = AESEncryption.decrypt(messageReceived, sessionKey, iv, mac);
+            LogFileManager.writeToFile(myPhoneNumber, response, signature);
+            return response;
         } else {
             return VERIFY_DIGITAL_SIGNATURE_ERROR_MESSAGE;
         }
