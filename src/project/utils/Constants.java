@@ -54,6 +54,10 @@ public class Constants {
 
     /*************************** Others ***************************/
 
+    // Rana: C:/Users/ASUS/Desktop/securiity-project/security-chatting-project
+    // Rama: F:/Programming/Java/security_chatting_project/fifth_stage_v1/fifth_stage
+    // Ahmad: E:/iss/security-chatting-project
+    // Hamza: C:/Users/Hamza/Desktop/security-chatting-project
     // FIXME Change this path to your own project path
     public static String PROJECT_FOLDER_PATH = "C:/Users/Hamza/Desktop/security-chatting-project";
 
