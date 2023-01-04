@@ -8,7 +8,7 @@ public class Constants {
 
     public static int GCM_TAG_LENGTH = 16;
 
-    public static final String PASSWORD_HASHING_ALGORITHM = "PBKDF2WithHmacSHA1";
+    public static final String PASSWORD_HASHING_ALGORITHM = "PBKDF2WithHmacSHA512";
 
     public static String AES = "AES";
 
