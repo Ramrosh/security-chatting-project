@@ -14,6 +14,7 @@ public class LogFileManager {
     private static final Calendar cal = Calendar.getInstance();
 
     public static void writeToFile(String phoneNumber, String response, String signature) {
+        if(phoneNumber.isEmpty()) return;
         try {
             FileWriter myWriter = new FileWriter(USER_LOG_FILE_PATH(phoneNumber), true);
             myWriter.write("Response from server (" + response + ") Signature (" + signature + ") at: " + dateFormat.format(cal.getTime()) + "\n");
