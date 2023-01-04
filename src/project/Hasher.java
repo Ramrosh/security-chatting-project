@@ -26,7 +26,7 @@ public final class Hasher
      */
     public static final int DEFAULT_COST = 16;
 
-    private static final String ALGORITHM = "PBKDF2WithHmacSHA1";
+    private static final String ALGORITHM = "PBKDF2WithHmacSHA512";
 
     private static final int SIZE = 128;
 
