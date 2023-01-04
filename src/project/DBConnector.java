@@ -202,13 +202,12 @@ public class DBConnector {
 
     public static ArrayList<HashMap> getMessages(String clientPhoneNumber) {
         Connection connection = connect();
-        String findSQL = "Select * from encrypted_messages where sender_phone_number = ? OR receiver_phone_number =?";
+        String findSQL = "Select * from encrypted_messages where receiver_phone_number =?";
         try {
             assert connection != null : "connection error";
             assert (clientPhoneNumber.length() <= 10 && clientPhoneNumber.matches("\\d+")) : "invalid input";
             PreparedStatement preparedStatement = connection.prepareStatement(findSQL);
             preparedStatement.setString(1, clientPhoneNumber);
-            preparedStatement.setString(2, clientPhoneNumber);
             ResultSet messages = preparedStatement.executeQuery();
             ArrayList<HashMap> messagesResultList = new ArrayList<>();
             while (messages.next()) {

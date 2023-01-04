@@ -102,8 +102,6 @@ public class RSAEncryption {
      * This function takes CipherText, and return the plainText.
      **/
     public static String decrypt(String cipherText, Key privateKey) {
-        System.out.println(cipherText);
-        System.out.println(privateKey);
         try {
             byte[] cipherTextArray = Base64.getDecoder().decode(cipherText);
 
