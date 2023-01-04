@@ -113,7 +113,7 @@ public class ChatClient {
                 }
             } while (true);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println(e.getMessage());
         }
     }
 
@@ -248,7 +248,7 @@ public class ChatClient {
     //util methods
 
     private class ClientGetMessages extends Thread {
-        static ServerSocket getMessagesServerSocket;
+        ServerSocket getMessagesServerSocket;
         public void stopGetMessages() {
             try {
                 isLoggedIn = false;
@@ -271,7 +271,7 @@ public class ChatClient {
                         System.out.println(messageReceived);
                     }
                 }
-            } catch (IOException ignored) {
+            } catch (Exception ignored) {
             }
         }
     }
