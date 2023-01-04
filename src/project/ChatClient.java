@@ -33,7 +33,7 @@ public class ChatClient {
     //attributes
     boolean isLoggedIn;
 
-    private static String myPhoneNumber;
+    private String myPhoneNumber;
     //input&output streams
     private Scanner inputFromSocket;
     private PrintWriter outputToSocket;
@@ -259,7 +259,7 @@ public class ChatClient {
             System.out.println("enter the message: (press " + TERMINATOR_STRING + " to send)");
             StringBuilder message = new StringBuilder();
             String str;
-            while (!(str = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
+            if (!(str = inputFromTerminal.nextLine()).equals(TERMINATOR_STRING)) {
                 message.append(str);
             }
             String encryptedMessage = RSAEncryption.encrypt(message.toString(), receiverCertificate.subjectPublicKey);
@@ -281,11 +281,13 @@ public class ChatClient {
                     try{
                         String response = decryptFromServer();
                         String[] messageInfo = response.split(", msg: ");
-                        System.out.println(messageInfo[0]);
+                        System.out.print(messageInfo[0]);
                         String[] msg = messageInfo[1].split(",");
-                        System.out.println(RSAEncryption.decrypt(msg[0], privateKey));
-                        System.out.println(msg[1]);
+                        System.out.print(" "+RSAEncryption.decrypt(msg[0], privateKey));
+                        System.out.print(msg[1]);
+                        System.out.println();
                     }catch (ArrayIndexOutOfBoundsException ignored){
+                        System.out.println();
                     }
                 }
         }
